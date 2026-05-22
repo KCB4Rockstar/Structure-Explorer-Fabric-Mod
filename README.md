@@ -1,6 +1,6 @@
 Structure Explorer
 
-Use `/discoveries` command to see all the structures you've visited.
+Use `/discoveries` command to see all the structures you've discovered.
 
 There is also:
 `/discoveries player <Player Name>`
