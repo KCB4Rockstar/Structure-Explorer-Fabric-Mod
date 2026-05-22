@@ -1,0 +1,87 @@
+package in.fellaguy.StructureExplorer.fabric.entrypoints;
+
+import in.fellaguy.StructureExplorer.StructureExplorer;
+import in.fellaguy.StructureExplorer.commands.SECommand;
+import in.fellaguy.StructureExplorer.PlayerNameCache;
+import in.fellaguy.StructureExplorer.PlayerStructureData;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.levelgen.structure.StructureStart;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.levelgen.structure.Structure;
+import net.minecraft.core.Registry;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+public class Main implements ModInitializer {
+    private static final int CHECK_INTERVAL_TICKS = 200;
+    private int tickCounter = 0;
+    private final Map<UUID, ChunkPos> lastCheckedChunk = new HashMap<>();
+
+    @Override
+    public void onInitialize() {
+        StructureExplorer.init();
+        CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, dedicated) ->
+            SECommand.createCommand(dispatcher));
+
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            PlayerNameCache.get(server).update(
+                handler.player.getUUID(),
+                handler.player.getScoreboardName()
+            );
+        });
+
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            lastCheckedChunk.remove(handler.player.getUUID());
+        });
+
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            tickCounter++;
+            if (tickCounter < CHECK_INTERVAL_TICKS) return;
+            tickCounter = 0;
+
+            Registry<Structure> structureRegistry = server.registryAccess()
+                .lookupOrThrow(Registries.STRUCTURE);
+            int total = structureRegistry.size();
+            PlayerStructureData data = PlayerStructureData.get(server);
+
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                ChunkPos currentChunk = new ChunkPos(player.blockPosition());
+                if (currentChunk.equals(lastCheckedChunk.get(player.getUUID()))) continue;
+                lastCheckedChunk.put(player.getUUID(), currentChunk);
+
+                Set<Identifier> known = data.getStructuresForPlayer(player.getUUID());
+
+                List<StructureStart> starts = player.level()
+                    .structureManager()
+                    .startsForStructure(currentChunk, s -> true);
+
+                for (StructureStart start : starts) {
+                    Identifier key = structureRegistry.getKey(start.getStructure());
+                    if (key == null || known.contains(key)) continue;
+                    if (!start.getBoundingBox().isInside(player.blockPosition())) continue;
+
+                    data.add(player.getUUID(), key);
+                    int visited = known.size()+1;
+                    player.sendSystemMessage(
+                        Component.literal(key.toString()).withStyle(ChatFormatting.GOLD)
+                            .append(Component.literal(" [New discovery!] (" + visited + "/" + total + ")")
+                                .withStyle(ChatFormatting.GREEN)),
+                        false
+                    );
+                }
+            }
+        });
+    }
+}

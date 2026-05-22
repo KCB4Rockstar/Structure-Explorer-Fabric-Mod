@@ -1,0 +1,183 @@
+plugins {
+    id 'idea'
+    id 'maven-publish'
+    id 'me.modmuss50.mod-publish-plugin' version '0.8.4' apply false
+    id 'net.neoforged.moddev' version '2.0.121' apply false
+    id 'net.fabricmc.fabric-loom-companion' version '1.14.4' apply false
+    id 'fabric-loom' version '1.14-SNAPSHOT' apply false
+}
+
+def javaVersion = 21
+
+def ENV = System.getenv()
+version = mod_version
+group = mod_group_id
+
+allprojects {
+    tasks.register('buildAndRelease') {
+        dependsOn(tasks.build, tasks.publish)
+    }
+}
+
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'maven-publish'
+    apply plugin: 'me.modmuss50.mod-publish-plugin'
+    project.group = rootProject.group
+    project.version = rootProject.version
+
+    base {
+        archivesName.set(mod_id)
+    }
+
+    version = "${rootProject.mod_version}+${rootProject.minecraft_version}-${name}"
+
+    repositories {
+        maven { url = 'https://maven.teamresourceful.com/repository/maven-releases' }
+    }
+
+    dependencies {
+        compileOnly "org.jetbrains:annotations:${jetbrains_annotations_version}"
+    }
+
+    processResources {
+        filteringCharset "UTF-8"
+
+        def expandProps = [
+                "version"              : project.version,
+                "maven_group_id"       : project.mod_group_id,
+                "mod_id"               : project.mod_id,
+                "mod_display_name"     : project.mod_name,
+                "mod_description"      : project.mod_description,
+                "sources_url"          : project.sources_url,
+                "issues_url"           : project.issues_url,
+                "license_url"          : project.license_url,
+                "homepage_url"         : project.homepage_url,
+
+                "minecraft_version"    : project.minecraft_version,
+                "neoforge_version"     : project.neoforge_version,
+                "fabric_loader_version": project.fabric_loader_version,
+                "java_version"         : "${javaVersion}",
+        ]
+
+        filesMatching(['pack.mcmeta', '*.mod.json', 'META-INF/neoforge.mods.toml', '*.mixins.json']) {
+            expand expandProps
+        }
+        inputs.properties(expandProps)
+    }
+
+    java {
+        if (JavaVersion.current() < JavaVersion.toVersion(javaVersion)) {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(javaVersion)
+            }
+        } else {
+            sourceCompatibility = JavaVersion.toVersion(javaVersion)
+            targetCompatibility = JavaVersion.toVersion(javaVersion)
+        }
+
+        withSourcesJar()
+//        withJavadocJar()
+    }
+
+    javadoc {
+        // make javadoc not throw on mixin's '@reason'
+        options.tags = ["reason"]
+    }
+
+    jar {
+        def licenseFile = rootProject.file("LICENSE.txt")
+        inputs.file(licenseFile)
+
+        from(licenseFile) {
+            rename { "LICENSE.txt" }
+        }
+    }
+
+    sourcesJar {
+        def licenseFile = rootProject.file("LICENSE.txt")
+        inputs.file(licenseFile)
+
+        from(licenseFile) {
+            rename { "LICENSE.txt" }
+        }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.release.set(javaVersion)
+    }
+
+    tasks.publishMods.mustRunAfter tasks.publish
+    tasks.buildAndRelease.dependsOn(tasks.publish).dependsOn(tasks.publishMods)
+
+    publishing {
+        repositories {
+            if (ENV.MAVEN_USER) {
+                maven {
+                    url = uri("")
+                    credentials {
+                        username ENV.MAVEN_USER
+                        password ENV.MAVEN_PASS
+                    }
+                }
+            }
+        }
+
+        publications {
+            "mavenJava${project.name}"(MavenPublication) {
+                from components.java
+                artifactId "${project.mod_id}".toUpperCase()
+
+                pom {
+                    name = project.mod_name
+                    description = project.mod_description
+                    url = project.sources_url
+
+                    scm {
+                        connection = "git:${project.sources_url}.git"
+                        developerConnection = "git:${project.sources_url}.git"
+                        url = project.sources_url
+                    }
+
+                    licenses {
+                        license {
+                            name = 'MIT License'
+                            url = project.license_url
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id = ''
+                            name = ''
+                            email = ''
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+
+    publishMods {
+        type = STABLE
+
+        displayName = "${project.mod_name} v${project.mod_version} (${project.minecraft_version} ${project.name.capitalize()})"
+        version = project.version
+
+        def changeLogFile = project.file("CHANGELOG.md")
+        changelog = changeLogFile.exists() ? changeLogFile.text : ""
+    }
+}
+
+tasks.named('wrapper', Wrapper).configure {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+// IDEA no longer automatically downloads sources/javadoc jars for dependencies, so we need to explicitly enable the behavior.
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}
