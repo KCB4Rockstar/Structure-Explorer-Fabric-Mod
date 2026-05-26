@@ -138,7 +138,7 @@ public class SECommand {
         }
 
         MutableComponent component = Component.literal("Players who discovered ")
-            .append(Component.literal(structureId.toString()).withStyle(ChatFormatting.GOLD))
+            .append(clickableStructure(structureId))
             .append(Component.literal(":"));
 
         PlayerNameCache nameCache = PlayerNameCache.get(server);
@@ -193,7 +193,7 @@ public class SECommand {
         for (int i = startIndex; i < endIndex; i++) {
             Identifier structureId = structures.get(i);
             MutableComponent lineItem = Component.literal(" - ").withStyle(ChatFormatting.RESET)
-                     .append(Component.literal(structureId.toString()).withStyle(ChatFormatting.GOLD));
+                .append(clickableStructure(structureId));
             cs.getSource().sendSuccess(() -> lineItem, false);
         }
 
@@ -320,5 +320,14 @@ public class SECommand {
 
         cs.getSource().sendSuccess(() -> footer, false);
         return 1;
+    }
+
+    public static MutableComponent clickableStructure(Identifier structureId) {
+        return Component.literal(structureId.toString())
+            .withStyle(style -> style
+                .withColor(ChatFormatting.GOLD)
+                .withClickEvent(new ClickEvent.RunCommand("/discoveries structure \"" + structureId + "\""))
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to see all discoverers")))
+            );
     }
 }

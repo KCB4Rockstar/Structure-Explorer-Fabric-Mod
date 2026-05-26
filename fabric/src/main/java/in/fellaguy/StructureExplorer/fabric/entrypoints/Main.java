@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import net.minecraft.network.chat.MutableComponent;
 
 public class Main implements ModInitializer {
     private static final int CHECK_INTERVAL_TICKS = 200;
@@ -72,16 +73,34 @@ public class Main implements ModInitializer {
                     if (key == null || known.contains(key)) continue;
                     if (!start.getBoundingBox().isInside(player.blockPosition())) continue;
 
+                    int discoverersBefore = data.getPlayersForStructure(key).size();
                     data.add(player.getUUID(), key);
-                    int visited = known.size()+1;
-                    player.sendSystemMessage(
-                        Component.literal(key.toString()).withStyle(ChatFormatting.GOLD)
-                            .append(Component.literal(" [New discovery!] (" + visited + "/" + total + ")")
-                                .withStyle(ChatFormatting.GREEN)),
-                        false
-                    );
+                    int visited = known.size() + 1;
+
+                    MutableComponent msg = SECommand.clickableStructure(key)
+                        .append(Component.literal(" [New discovery!] (" + visited + "/" + total + ")")
+                            .withStyle(ChatFormatting.GREEN));
+
+                    if (discoverersBefore == 0) {
+                        msg.append(Component.literal(" [First Discoverer!]").withStyle(ChatFormatting.AQUA));
+                    } else {
+                        int nth = discoverersBefore + 1;
+                        msg.append(Component.literal(" [" + nth + getOrdinalSuffix(nth) + " Discoverer]").withStyle(ChatFormatting.YELLOW));
+                    }
+
+                    player.sendSystemMessage(msg, false);
                 }
             }
         });
+    }
+
+    private static String getOrdinalSuffix(int n) {
+        if (n >= 11 && n <= 13) return "th";
+        return switch (n % 10) {
+            case 1 -> "st";
+            case 2 -> "nd";
+            case 3 -> "rd";
+            default -> "th";
+        };
     }
 }
