@@ -631,7 +631,7 @@ public class SECommand {
         Registry<Structure> structureRegistry = cs.getSource().getServer().registryAccess()
             .lookupOrThrow(Registries.STRUCTURE);
 
-        ChunkPos chunkPos = new ChunkPos(player.blockPosition());
+        ChunkPos chunkPos = ChunkPos.containing(player.blockPosition());
         java.util.List<StructureStart> starts = player.level()
             .structureManager()
             .startsForStructure(chunkPos, s -> true);
