@@ -16,6 +16,7 @@ Primary command: `/explorer` — Alias: `/discoveries`
 | `/explorer player <name> page? <n>` | View another player's discoveries. Page is optional |
 | `/explorer structure <id>` | Who has discovered a specific structure |
 | `/explorer instances <id> page? <n>` | Your recorded instances of a specific structure. Page is optional |
+| `/explorer here` | Show the info panel for the structure you are currently standing in |
 | `/explorer leaderboard page? <n>` | Top players ranked by discovery count. Page is optional |
 | `/explorer playerinstances <player> <id>` | **[OP]** View any player's instances |
 | `/explorer reload` | **[OP]** Reload config and translations |
@@ -32,6 +33,8 @@ Located at: `config/structure_explorer/structure_explorer.json`
 | `showNthDiscoverer` | `true` | Whether to show discoverer badges in chat notifications, e.g. `[First Discoverer!]` or `[3rd Discoverer]`. |
 | `useMonthDayYear` | `false` | Timestamp format. `false` = DD/MM/YYYY HH:MM:SS — `true` = MM/DD/YYYY HH:MM:SS |
 | `trackInstances` | `true` | Whether to record coordinates and timestamps for each structure instance visited. When `false`, only which structure *types* have been discovered is tracked. |
+| `sounds.newDiscoverySound` | `true` | Plays sound effect for a new Discovery found. |
+| `sounds.newInstanceSound` | `true` | Plays sound effect for a new Instance found. |
 
 ---
 
@@ -167,7 +170,7 @@ Result: **Minecraft: Stronghold**, **Minecraft: End City**, etc.
   }
 }
 ```
-All other `minecraft:` structures will fall back to showing their raw ID.
+All other `minecraft:` structures will fall back to a prettified name like **Stronghold [Minecraft]**.
 
 ---
 
@@ -191,7 +194,29 @@ Result: **Armory [Katter's Structures]**
 
 ## 🛠 For Mod Makers
 
-Mod makers can bundle translations inside their mod jar so they load automatically with zero setup for the user:
+### Option 1 — Lang file *(simplest)*
+
+If your mod already has a lang file, Structure Explorer will read it automatically. Add entries using this key format:
+
+```json
+"structure.<namespace>.<path>": "Display Name"
+```
+
+Example in `assets/mymod/lang/en_us.json`:
+```json
+{
+  "structure.mymod.cool_dungeon": "Cool Dungeon",
+  "structure.mymod.big_tower": "Big Tower"
+}
+```
+
+These are picked up automatically and displayed as **Cool Dungeon [My Mod]** in all commands. The readable namespace is derived by replacing underscores with spaces and capitalising each word — e.g. `my_mod` → `My Mod`. No extra files needed.
+
+---
+
+### Option 2 — translations.json *(full control)*
+
+For full control over prefix, suffix, colors, and exact names without the auto-appended namespace suffix, bundle a file inside your mod jar:
 
 ```
 your-mod.jar
@@ -202,7 +227,27 @@ your-mod.jar
                 └── translations.json
 ```
 
-If anyone wants to make unofficial Datapacks for different mods to support Structure Explorer translations, you can use this format.
+This uses the same format as the server admin config above. It loads after the lang file scan, so it takes priority over auto-detected names. Server admin `config/translations/` files load after this and always win.
+
+Example:
+```json
+{
+  "translations": {
+    "mymod": {
+      "prefix": "My Mod: ",
+      "prefix_color": "dark_aqua",
+      "structures": {
+        "cool_dungeon": "Cool Dungeon",
+        "big_tower": "Big Tower"
+      }
+    }
+  }
+}
+```
+
+---
+
+If anyone wants to make unofficial Datapacks for different mods to support Structure Explorer translations, you can use this format:
 
 ```
 your-datapack
@@ -213,5 +258,7 @@ your-datapack
 ```
 
 Bundled mod translations load **before** `config/translations/` files, so server admins can always override them by placing their own file in the translations folder.
+
+_Disclaimer: AI was used for varying parts of this mod._
 
 I couldn't have started making this mod without modifying and learning from the [WITS mod](https://github.com/TelepathicGrunt/WITS) by TelepathicGrunt
