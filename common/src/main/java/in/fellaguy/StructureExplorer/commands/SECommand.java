@@ -240,7 +240,9 @@ public class SECommand {
     // --- Info panel ---
 
     private static int showStructureInfo(CommandContext<CommandSourceStack> cs, Identifier structureId) {
-        MutableComponent line1 = StructureTranslations.resolve(structureId)
+        MutableComponent name = StructureTranslations.resolve(structureId)
+            .withStyle(style -> style.withHoverEvent(new HoverEvent.ShowText(Component.literal(structureId.toString()))));
+        MutableComponent line1 = name
             .append(Component.literal(" | OPTIONS").withStyle(ChatFormatting.GRAY));
         cs.getSource().sendSuccess(() -> line1, false);
 
@@ -660,14 +662,18 @@ public class SECommand {
             .structureManager()
             .startsForStructure(chunkPos, s -> true);
 
+        boolean found = false;
         for (StructureStart start : starts) {
             if (!start.getBoundingBox().isInside(player.blockPosition())) continue;
             Identifier key = structureRegistry.getKey(start.getStructure());
             if (key == null) continue;
-            return showStructureInfo(cs, key);
+            showStructureInfo(cs, key);
+            found = true;
         }
 
-        cs.getSource().sendSuccess(() -> Component.literal("You are not within a structure.").withStyle(ChatFormatting.GRAY), false);
+        if (!found) {
+            cs.getSource().sendSuccess(() -> Component.literal("You are not within a structure.").withStyle(ChatFormatting.GRAY), false);
+        }
         return 1;
     }
 
