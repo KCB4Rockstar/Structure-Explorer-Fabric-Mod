@@ -79,6 +79,7 @@ public class TranslationLoader implements SimpleSynchronousResourceReloadListene
                     if (!Files.exists(langFile)) return;
 
                     Map<String, String> structures = new HashMap<>();
+                    String readableNamespace = StructureTranslations.prettify(namespace);
                     try (InputStreamReader reader = new InputStreamReader(Files.newInputStream(langFile))) {
                         JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
                         for (Map.Entry<String, JsonElement> entry : json.entrySet()) {
@@ -87,7 +88,8 @@ public class TranslationLoader implements SimpleSynchronousResourceReloadListene
                             if (!key.startsWith("structure.") || !entry.getValue().isJsonPrimitive()) continue;
                             String[] parts = key.split("\\.", 3);
                             if (parts.length != 3 || !parts[1].equals(namespace)) continue;
-                            structures.put(parts[2], entry.getValue().getAsString());
+                            String displayName = entry.getValue().getAsString() + " [" + readableNamespace + "]";
+                            structures.put(parts[2], displayName);
                         }
                     } catch (Exception ignored) {}
 
