@@ -249,16 +249,14 @@ public class SECommand {
         MutableComponent showPlayers = Component.literal("[Show Players]")
             .withStyle(style -> style
                 .withColor(ChatFormatting.AQUA)
-                .withBold(true)
-                .withClickEvent(new ClickEvent.RunCommand("/explorer structure \"" + structureId + "\""))
+                                .withClickEvent(new ClickEvent.RunCommand("/explorer structure \"" + structureId + "\""))
                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("Show all players who discovered this structure")))
             );
 
         MutableComponent showInstances = Component.literal(" [Show Instances]")
             .withStyle(style -> style
                 .withColor(ChatFormatting.YELLOW)
-                .withBold(true)
-                .withClickEvent(new ClickEvent.RunCommand("/explorer instances \"" + structureId + "\""))
+                                .withClickEvent(new ClickEvent.RunCommand("/explorer instances \"" + structureId + "\""))
                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("Show your instances of this structure")))
             );
 
@@ -316,10 +314,6 @@ public class SECommand {
             cs.getSource().sendSuccess(() -> instanceLine(inst, isOp), false);
         }
 
-        int printed = endIndex - startIndex;
-        for (int p = printed; p < ITEMS_PER_PAGE; p++) {
-            cs.getSource().sendSuccess(() -> Component.literal(""), false);
-        }
 
         String encodedId = "\"" + structureId + "\"";
         MutableComponent footer = Component.empty();
@@ -327,8 +321,7 @@ public class SECommand {
         if (page > 1) {
             String prevCmd = "/explorer instances " + encodedId + " page " + (page - 1);
             footer.append(Component.literal("[Previous] ").withStyle(style -> style
-                .withColor(ChatFormatting.YELLOW).withBold(true)
-                .withClickEvent(new ClickEvent.RunCommand(prevCmd))
+                .withColor(ChatFormatting.YELLOW)                .withClickEvent(new ClickEvent.RunCommand(prevCmd))
                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page - 1))))));
         } else {
             footer.append(Component.literal("[Previous] ").withStyle(ChatFormatting.GRAY));
@@ -339,8 +332,7 @@ public class SECommand {
         if (page < totalPages) {
             String nextCmd = "/explorer instances " + encodedId + " page " + (page + 1);
             footer.append(Component.literal("[Next]").withStyle(style -> style
-                .withColor(ChatFormatting.YELLOW).withBold(true)
-                .withClickEvent(new ClickEvent.RunCommand(nextCmd))
+                .withColor(ChatFormatting.YELLOW)                .withClickEvent(new ClickEvent.RunCommand(nextCmd))
                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page + 1))))));
         } else {
             footer.append(Component.literal("[Next]").withStyle(ChatFormatting.GRAY));
@@ -421,10 +413,6 @@ public class SECommand {
             cs.getSource().sendSuccess(() -> instanceLine(inst, true), false);
         }
 
-        int printed = endIndex - startIndex;
-        for (int p = printed; p < ITEMS_PER_PAGE; p++) {
-            cs.getSource().sendSuccess(() -> Component.literal(""), false);
-        }
 
         String encodedId = "\"" + structureId + "\"";
         String encodedPlayer = "\"" + targetName + "\"";
@@ -433,8 +421,7 @@ public class SECommand {
         if (page > 1) {
             String prevCmd = "/explorer playerinstances " + encodedPlayer + " " + encodedId + " page " + (page - 1);
             footer.append(Component.literal("[Previous] ").withStyle(style -> style
-                .withColor(ChatFormatting.YELLOW).withBold(true)
-                .withClickEvent(new ClickEvent.RunCommand(prevCmd))
+                .withColor(ChatFormatting.YELLOW)                .withClickEvent(new ClickEvent.RunCommand(prevCmd))
                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page - 1))))));
         } else {
             footer.append(Component.literal("[Previous] ").withStyle(ChatFormatting.GRAY));
@@ -445,8 +432,7 @@ public class SECommand {
         if (page < totalPages) {
             String nextCmd = "/explorer playerinstances " + encodedPlayer + " " + encodedId + " page " + (page + 1);
             footer.append(Component.literal("[Next]").withStyle(style -> style
-                .withColor(ChatFormatting.YELLOW).withBold(true)
-                .withClickEvent(new ClickEvent.RunCommand(nextCmd))
+                .withColor(ChatFormatting.YELLOW)                .withClickEvent(new ClickEvent.RunCommand(nextCmd))
                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page + 1))))));
         } else {
             footer.append(Component.literal("[Next]").withStyle(ChatFormatting.GRAY));
@@ -546,18 +532,13 @@ public class SECommand {
             cs.getSource().sendSuccess(() -> lineItem, false);
         }
 
-        int printedLines = endIndex - startIndex;
-        for (int p = printedLines; p < ITEMS_PER_PAGE; p++) {
-            cs.getSource().sendSuccess(() -> Component.literal(""), false);
-        }
 
         MutableComponent footer = Component.empty();
 
         if (page > 1) {
             String prevCommand = baseCommandPrefix + (page - 1);
             footer.append(Component.literal("[Previous] ").withStyle(style -> style
-                .withColor(ChatFormatting.YELLOW).withBold(true)
-                .withClickEvent(new ClickEvent.RunCommand(prevCommand))
+                .withColor(ChatFormatting.YELLOW)                .withClickEvent(new ClickEvent.RunCommand(prevCommand))
                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page - 1))))));
         } else {
             footer.append(Component.literal("[Previous] ").withStyle(ChatFormatting.GRAY));
@@ -568,8 +549,7 @@ public class SECommand {
         if (page < totalPages) {
             String nextCommand = baseCommandPrefix + (page + 1);
             footer.append(Component.literal("[Next]").withStyle(style -> style
-                .withColor(ChatFormatting.YELLOW).withBold(true)
-                .withClickEvent(new ClickEvent.RunCommand(nextCommand))
+                .withColor(ChatFormatting.YELLOW)                .withClickEvent(new ClickEvent.RunCommand(nextCommand))
                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page + 1))))));
         } else {
             footer.append(Component.literal("[Next]").withStyle(ChatFormatting.GRAY));
@@ -617,18 +597,13 @@ public class SECommand {
             cs.getSource().sendSuccess(() -> line, false);
         }
 
-        int printedLines = endIndex - startIndex;
-        for (int p = printedLines; p < ITEMS_PER_PAGE; p++) {
-            cs.getSource().sendSuccess(() -> Component.literal(""), false);
-        }
 
         MutableComponent footer = Component.empty();
 
         if (page > 1) {
             String prevCommand = "/explorer leaderboard page " + (page - 1);
             footer.append(Component.literal("[Previous] ").withStyle(style -> style
-                .withColor(ChatFormatting.YELLOW).withBold(true)
-                .withClickEvent(new ClickEvent.RunCommand(prevCommand))
+                .withColor(ChatFormatting.YELLOW)                .withClickEvent(new ClickEvent.RunCommand(prevCommand))
                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page - 1))))));
         } else {
             footer.append(Component.literal("[Previous] ").withStyle(ChatFormatting.GRAY));
@@ -639,8 +614,7 @@ public class SECommand {
         if (page < totalPages) {
             String nextCommand = "/explorer leaderboard page " + (page + 1);
             footer.append(Component.literal("[Next]").withStyle(style -> style
-                .withColor(ChatFormatting.YELLOW).withBold(true)
-                .withClickEvent(new ClickEvent.RunCommand(nextCommand))
+                .withColor(ChatFormatting.YELLOW)                .withClickEvent(new ClickEvent.RunCommand(nextCommand))
                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page + 1))))));
         } else {
             footer.append(Component.literal("[Next]").withStyle(ChatFormatting.GRAY));
