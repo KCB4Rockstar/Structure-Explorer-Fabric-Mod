@@ -4,10 +4,12 @@ import in.fellaguy.StructureExplorer.StructureExplorer;
 import in.fellaguy.StructureExplorer.commands.SECommand;
 import in.fellaguy.StructureExplorer.PlayerNameCache;
 import in.fellaguy.StructureExplorer.PlayerStructureData;
+import in.fellaguy.StructureExplorer.fabric.ModConfig;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -26,15 +28,16 @@ import java.util.UUID;
 import net.minecraft.network.chat.MutableComponent;
 
 public class Main implements ModInitializer {
-    private static final int CHECK_INTERVAL_TICKS = 200;
     private int tickCounter = 0;
     private final Map<UUID, ChunkPos> lastCheckedChunk = new HashMap<>();
 
     @Override
     public void onInitialize() {
+        ModConfig.load(FabricLoader.getInstance().getConfigDir());
         StructureExplorer.init();
         CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, dedicated) ->
-            SECommand.createCommand(dispatcher));
+            SECommand.createCommand(dispatcher,
+                () -> ModConfig.load(FabricLoader.getInstance().getConfigDir())));
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             PlayerNameCache.get(server).update(
@@ -49,7 +52,7 @@ public class Main implements ModInitializer {
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             tickCounter++;
-            if (tickCounter < CHECK_INTERVAL_TICKS) return;
+            if (tickCounter < ModConfig.get().getCheckIntervalTicks()) return;
             tickCounter = 0;
 
             Registry<Structure> structureRegistry = server.registryAccess()
@@ -81,11 +84,13 @@ public class Main implements ModInitializer {
                         .append(Component.literal(" [New discovery!] (" + visited + "/" + total + ")")
                             .withStyle(ChatFormatting.GREEN));
 
-                    if (discoverersBefore == 0) {
-                        msg.append(Component.literal(" [First Discoverer!]").withStyle(ChatFormatting.AQUA));
-                    } else {
-                        int nth = discoverersBefore + 1;
-                        msg.append(Component.literal(" [" + nth + getOrdinalSuffix(nth) + " Discoverer]").withStyle(ChatFormatting.YELLOW));
+                    if (ModConfig.get().showNthDiscoverer) {
+                        if (discoverersBefore == 0) {
+                            msg.append(Component.literal(" [First Discoverer!]").withStyle(ChatFormatting.AQUA));
+                        } else {
+                            int nth = discoverersBefore + 1;
+                            msg.append(Component.literal(" [" + nth + getOrdinalSuffix(nth) + " Discoverer]").withStyle(ChatFormatting.YELLOW));
+                        }
                     }
 
                     player.sendSystemMessage(msg, false);

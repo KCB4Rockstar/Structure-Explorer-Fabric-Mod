@@ -40,7 +40,7 @@ import java.util.Map;
 public class SECommand {
     private static final int ITEMS_PER_PAGE = 8;
     
-    public static void createCommand(CommandDispatcher<CommandSourceStack> dispatcher) {
+    public static void createCommand(CommandDispatcher<CommandSourceStack> dispatcher, Runnable reloadConfig) {
         // /discoveries — list structures for the calling player
         LiteralCommandNode<CommandSourceStack> visitsSource = dispatcher.register(
             Commands.literal("discoveries")
@@ -122,6 +122,16 @@ public class SECommand {
                             .executes(cs -> sendLeaderboard(cs, IntegerArgumentType.getInteger(cs, "page")))
                         )
                     )
+                )
+
+                // /discoveries reload — OP only
+                .then(Commands.literal("reload")
+                    .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                    .executes(cs -> {
+                        reloadConfig.run();
+                        cs.getSource().sendSuccess(() -> Component.literal("Structure Explorer config reloaded.").withStyle(ChatFormatting.GREEN), false);
+                        return 1;
+                    })
                 )
         );
 
