@@ -32,6 +32,8 @@ Located at: `config/structure_explorer/structure_explorer.json`
 | `showNthDiscoverer` | `true` | Whether to show discoverer badges in chat notifications, e.g. `[First Discoverer!]` or `[3rd Discoverer]`. |
 | `useMonthDayYear` | `false` | Timestamp format. `false` = DD/MM/YYYY HH:MM:SS — `true` = MM/DD/YYYY HH:MM:SS |
 | `trackInstances` | `true` | Whether to record coordinates and timestamps for each structure instance visited. When `false`, only which structure *types* have been discovered is tracked. |
+| `sounds.newDiscoverySound` | `true` | Plays sound effect for a new Discovery found. |
+| `sounds.newInstanceSound` | `true` | Plays sound effect for a new Instance found. |
 
 ---
 
