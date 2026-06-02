@@ -95,7 +95,7 @@ public class PlayerStructureData extends SavedData {
         );
 
     public static final SavedDataType<PlayerStructureData> TYPE = new SavedDataType<>(
-        "player_structure_data",
+        Identifier.tryParse("structureexplorer:player_structure_data"),
         PlayerStructureData::new,
         CODEC,
         null

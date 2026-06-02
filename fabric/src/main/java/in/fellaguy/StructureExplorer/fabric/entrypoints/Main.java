@@ -65,7 +65,7 @@ public class Main implements ModInitializer {
             PlayerStructureData data = PlayerStructureData.get(server);
 
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-                ChunkPos currentChunk = new ChunkPos(player.blockPosition());
+                ChunkPos currentChunk = ChunkPos.containing(player.blockPosition());
                 if (currentChunk.equals(lastCheckedChunk.get(player.getUUID()))) continue;
                 lastCheckedChunk.put(player.getUUID(), currentChunk);
 

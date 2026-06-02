@@ -2,6 +2,7 @@ package in.fellaguy.StructureExplorer;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.core.UUIDUtil;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -33,7 +34,7 @@ public class PlayerNameCache extends SavedData {
         MAP_CODEC.xmap(PlayerNameCache::new, c -> c.uuidToName);
 
     public static final SavedDataType<PlayerNameCache> TYPE = new SavedDataType<>(
-        "player_name_cache",
+        Identifier.tryParse("structureexplorer:player_name_cache"),
         PlayerNameCache::new,
         CODEC,
         null
