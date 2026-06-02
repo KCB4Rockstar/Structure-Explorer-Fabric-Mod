@@ -1,0 +1,47 @@
+{
+  "translations": {
+    "minecraft": {
+      "prefix": "",
+      "suffix": "",
+      "prefix_color": "",
+      "suffix_color": "",
+      "name_color": "",
+      "structures": {
+        "ancient_city": "Ancient City",
+        "bastion_remnant": "Bastion Remnant",
+        "buried_treasure": "Buried Treasure",
+        "desert_pyramid": "Desert Temple",
+        "end_city": "End City",
+        "fortress": "Nether Fortress",
+        "igloo": "Igloo",
+        "jungle_pyramid": "Jungle Temple",
+        "mansion": "Woodland Mansion",
+        "mineshaft": "Abandoned Mineshaft",
+        "mineshaft_mesa": "Abandoned Mineshaft (Mesa)",
+        "monument": "Ocean Monument",
+        "nether_fossil": "Nether Fossil",
+        "ocean_ruin_cold": "Ocean Ruins (Cold)",
+        "ocean_ruin_warm": "Ocean Ruins (Warm)",
+        "pillager_outpost": "Pillager Outpost",
+        "ruined_portal": "Ruined Portal",
+        "ruined_portal_desert": "Ruined Portal (Desert)",
+        "ruined_portal_jungle": "Ruined Portal (Jungle)",
+        "ruined_portal_mountain": "Ruined Portal (Mountain)",
+        "ruined_portal_nether": "Ruined Portal (Nether)",
+        "ruined_portal_ocean": "Ruined Portal (Ocean)",
+        "ruined_portal_swamp": "Ruined Portal (Swamp)",
+        "shipwreck": "Shipwreck",
+        "shipwreck_beached": "Shipwreck (Beached)",
+        "stronghold": "Stronghold",
+        "swamp_hut": "Witch Hut",
+        "trail_ruins": "Trail Ruins",
+        "trial_chambers": "Trial Chambers",
+        "village_desert": "Desert Village",
+        "village_plains": "Plains Village",
+        "village_savanna": "Savanna Village",
+        "village_snowy": "Snowy Village",
+        "village_taiga": "Taiga Village"
+      }
+    }
+  }
+}

@@ -21,6 +21,7 @@ import in.fellaguy.StructureExplorer.PlayerStructureData;
 import in.fellaguy.StructureExplorer.PlayerStructureData.StructureInstance;
 import in.fellaguy.StructureExplorer.PlayerNameCache;
 import in.fellaguy.StructureExplorer.StructureExplorer;
+import in.fellaguy.StructureExplorer.translations.StructureTranslations;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -38,7 +39,7 @@ public class SECommand {
 
     public static void createCommand(CommandDispatcher<CommandSourceStack> dispatcher, Runnable reloadConfig) {
         LiteralCommandNode<CommandSourceStack> visitsSource = dispatcher.register(
-            Commands.literal("discoveries")
+            Commands.literal("explorer")
                 .requires(Commands.hasPermission(Commands.LEVEL_ALL))
                 .executes(cs -> {
                     if (!cs.getSource().isPlayer()) {
@@ -61,7 +62,7 @@ public class SECommand {
                     )
                 )
 
-                // /discoveries structure <structureId> — list all players who found it
+                // /explorer structure <structureId> — list all players who found it
                 .then(Commands.literal("structure")
                     .then(Commands.argument("structureId", StringArgumentType.string())
                         .executes(cs -> {
@@ -76,7 +77,7 @@ public class SECommand {
                     )
                 )
 
-                // /discoveries player <name>
+                // /explorer player <name>
                 .then(Commands.literal("player")
                     .then(Commands.argument("player", StringArgumentType.string())
                         .suggests((cs, builder) -> {
@@ -109,7 +110,7 @@ public class SECommand {
                     )
                 )
 
-                // /discoveries leaderboard
+                // /explorer leaderboard
                 .then(Commands.literal("leaderboard")
                     .executes(cs -> sendLeaderboard(cs, 1))
                     .then(Commands.literal("page")
@@ -119,7 +120,7 @@ public class SECommand {
                     )
                 )
 
-                // /discoveries reload — OP only
+                // /explorer reload — OP only
                 .then(Commands.literal("reload")
                     .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                     .executes(cs -> {
@@ -129,7 +130,7 @@ public class SECommand {
                     })
                 )
 
-                // /discoveries info <structureId> — shows options panel (triggered by clicking a structure name)
+                // /explorer info <structureId> — shows options panel (triggered by clicking a structure name)
                 .then(Commands.literal("info")
                     .then(Commands.argument("structureId", StringArgumentType.string())
                         .executes(cs -> {
@@ -144,7 +145,7 @@ public class SECommand {
                     )
                 )
 
-                // /discoveries playerinstances <player> <structureId> [page <n>] — OP: view any player's instances
+                // /explorer playerinstances <player> <structureId> [page <n>] — OP: view any player's instances
                 .then(Commands.literal("playerinstances")
                     .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                     .then(Commands.argument("player", StringArgumentType.string())
@@ -186,7 +187,7 @@ public class SECommand {
                     )
                 )
 
-                // /discoveries instances <structureId> [page <n>] — paginated instance list for calling player
+                // /explorer instances <structureId> [page <n>] — paginated instance list for calling player
                 .then(Commands.literal("instances")
                     .then(Commands.argument("structureId", StringArgumentType.string())
                         .executes(cs -> {
@@ -223,8 +224,7 @@ public class SECommand {
     // --- Info panel ---
 
     private static int showStructureInfo(CommandContext<CommandSourceStack> cs, Identifier structureId) {
-        MutableComponent line1 = Component.literal(structureId.toString())
-            .withStyle(ChatFormatting.GOLD)
+        MutableComponent line1 = StructureTranslations.resolve(structureId)
             .append(Component.literal(" | OPTIONS").withStyle(ChatFormatting.GRAY));
         cs.getSource().sendSuccess(() -> line1, false);
 
@@ -232,7 +232,7 @@ public class SECommand {
             .withStyle(style -> style
                 .withColor(ChatFormatting.AQUA)
                 .withBold(true)
-                .withClickEvent(new ClickEvent.RunCommand("/discoveries structure \"" + structureId + "\""))
+                .withClickEvent(new ClickEvent.RunCommand("/explorer structure \"" + structureId + "\""))
                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("Show all players who discovered this structure")))
             );
 
@@ -240,7 +240,7 @@ public class SECommand {
             .withStyle(style -> style
                 .withColor(ChatFormatting.YELLOW)
                 .withBold(true)
-                .withClickEvent(new ClickEvent.RunCommand("/discoveries instances \"" + structureId + "\""))
+                .withClickEvent(new ClickEvent.RunCommand("/explorer instances \"" + structureId + "\""))
                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("Show your instances of this structure")))
             );
 
@@ -262,10 +262,10 @@ public class SECommand {
         int totalInstances = instances.size();
         String instanceWord = totalInstances == 1 ? "Instance" : "Instances";
 
-        MutableComponent header = Component.literal("").
-            append(Component.literal(String.valueOf(totalInstances)).withStyle(ChatFormatting.YELLOW))
+        MutableComponent header = Component.empty()
+            .append(Component.literal(String.valueOf(totalInstances)).withStyle(ChatFormatting.YELLOW))
             .append(Component.literal(" " + instanceWord + " of "))
-            .append(Component.literal(structureId.toString()).withStyle(ChatFormatting.GOLD))
+            .append(StructureTranslations.resolve(structureId))
             .append(Component.literal(" found by "))
             .append(Component.literal(playerName).withStyle(ChatFormatting.AQUA));
         cs.getSource().sendSuccess(() -> header, false);
@@ -307,7 +307,7 @@ public class SECommand {
         MutableComponent footer = Component.empty();
 
         if (page > 1) {
-            String prevCmd = "/discoveries instances " + encodedId + " page " + (page - 1);
+            String prevCmd = "/explorer instances " + encodedId + " page " + (page - 1);
             footer.append(Component.literal("[Previous] ").withStyle(style -> style
                 .withColor(ChatFormatting.YELLOW).withBold(true)
                 .withClickEvent(new ClickEvent.RunCommand(prevCmd))
@@ -319,7 +319,7 @@ public class SECommand {
         footer.append(Component.literal("Page " + page + "/" + totalPages + " ").withStyle(ChatFormatting.WHITE));
 
         if (page < totalPages) {
-            String nextCmd = "/discoveries instances " + encodedId + " page " + (page + 1);
+            String nextCmd = "/explorer instances " + encodedId + " page " + (page + 1);
             footer.append(Component.literal("[Next]").withStyle(style -> style
                 .withColor(ChatFormatting.YELLOW).withBold(true)
                 .withClickEvent(new ClickEvent.RunCommand(nextCmd))
@@ -368,10 +368,10 @@ public class SECommand {
         int totalInstances = instances.size();
         String instanceWord = totalInstances == 1 ? "Instance" : "Instances";
 
-        MutableComponent header = Component.literal("")
+        MutableComponent header = Component.empty()
             .append(Component.literal(String.valueOf(totalInstances)).withStyle(ChatFormatting.YELLOW))
             .append(Component.literal(" " + instanceWord + " of "))
-            .append(Component.literal(structureId.toString()).withStyle(ChatFormatting.GOLD))
+            .append(StructureTranslations.resolve(structureId))
             .append(Component.literal(" found by "))
             .append(Component.literal(targetName).withStyle(ChatFormatting.AQUA));
         cs.getSource().sendSuccess(() -> header, false);
@@ -413,7 +413,7 @@ public class SECommand {
         MutableComponent footer = Component.empty();
 
         if (page > 1) {
-            String prevCmd = "/discoveries playerinstances " + encodedPlayer + " " + encodedId + " page " + (page - 1);
+            String prevCmd = "/explorer playerinstances " + encodedPlayer + " " + encodedId + " page " + (page - 1);
             footer.append(Component.literal("[Previous] ").withStyle(style -> style
                 .withColor(ChatFormatting.YELLOW).withBold(true)
                 .withClickEvent(new ClickEvent.RunCommand(prevCmd))
@@ -425,7 +425,7 @@ public class SECommand {
         footer.append(Component.literal("Page " + page + "/" + totalPages + " ").withStyle(ChatFormatting.WHITE));
 
         if (page < totalPages) {
-            String nextCmd = "/discoveries playerinstances " + encodedPlayer + " " + encodedId + " page " + (page + 1);
+            String nextCmd = "/explorer playerinstances " + encodedPlayer + " " + encodedId + " page " + (page + 1);
             footer.append(Component.literal("[Next]").withStyle(style -> style
                 .withColor(ChatFormatting.YELLOW).withBold(true)
                 .withClickEvent(new ClickEvent.RunCommand(nextCmd))
@@ -498,7 +498,7 @@ public class SECommand {
 
         boolean isSelf = cs.getSource().isPlayer() && cs.getSource().getPlayer().getUUID().equals(playerUuid);
         boolean isOp = Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(cs.getSource());
-        String baseCommandPrefix = isSelf ? "/discoveries page " : "/discoveries player " + playerName + " page ";
+        String baseCommandPrefix = isSelf ? "/explorer page " : "/explorer player " + playerName + " page ";
 
         int total = getTotalStructureCount(server);
         MutableComponent header = Component.literal("")
@@ -516,7 +516,7 @@ public class SECommand {
             MutableComponent lineItem = Component.literal(" - ").withStyle(ChatFormatting.RESET)
                 .append(clickableStructure(structureId));
             if (isOp) {
-                String cmd = "/discoveries playerinstances \"" + playerName + "\" \"" + structureId + "\"";
+                String cmd = "/explorer playerinstances \"" + playerName + "\" \"" + structureId + "\"";
                 lineItem.append(Component.literal(" [Show Instances]")
                     .withStyle(style -> style
                         .withColor(ChatFormatting.YELLOW)
@@ -607,7 +607,7 @@ public class SECommand {
         MutableComponent footer = Component.empty();
 
         if (page > 1) {
-            String prevCommand = "/discoveries leaderboard page " + (page - 1);
+            String prevCommand = "/explorer leaderboard page " + (page - 1);
             footer.append(Component.literal("[Previous] ").withStyle(style -> style
                 .withColor(ChatFormatting.YELLOW).withBold(true)
                 .withClickEvent(new ClickEvent.RunCommand(prevCommand))
@@ -619,7 +619,7 @@ public class SECommand {
         footer.append(Component.literal("Page " + page + "/" + totalPages + " ").withStyle(ChatFormatting.WHITE));
 
         if (page < totalPages) {
-            String nextCommand = "/discoveries leaderboard page " + (page + 1);
+            String nextCommand = "/explorer leaderboard page " + (page + 1);
             footer.append(Component.literal("[Next]").withStyle(style -> style
                 .withColor(ChatFormatting.YELLOW).withBold(true)
                 .withClickEvent(new ClickEvent.RunCommand(nextCommand))
@@ -636,10 +636,9 @@ public class SECommand {
 
     // Clicking a structure name opens the info/options panel
     public static MutableComponent clickableStructure(Identifier structureId) {
-        return Component.literal(structureId.toString())
+        return StructureTranslations.resolve(structureId)
             .withStyle(style -> style
-                .withColor(ChatFormatting.GOLD)
-                .withClickEvent(new ClickEvent.RunCommand("/discoveries info \"" + structureId + "\""))
+                .withClickEvent(new ClickEvent.RunCommand("/explorer info \"" + structureId + "\""))
                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click for options")))
             );
     }

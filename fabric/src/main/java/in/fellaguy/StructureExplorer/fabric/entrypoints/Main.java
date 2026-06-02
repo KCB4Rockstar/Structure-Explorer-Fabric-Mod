@@ -5,12 +5,15 @@ import in.fellaguy.StructureExplorer.commands.SECommand;
 import in.fellaguy.StructureExplorer.PlayerNameCache;
 import in.fellaguy.StructureExplorer.PlayerStructureData;
 import in.fellaguy.StructureExplorer.fabric.ModConfig;
+import in.fellaguy.StructureExplorer.fabric.TranslationLoader;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.packs.PackType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -35,6 +38,7 @@ public class Main implements ModInitializer {
     public void onInitialize() {
         loadConfig();
         StructureExplorer.init();
+        ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new TranslationLoader());
 
         CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, dedicated) ->
             SECommand.createCommand(dispatcher, () -> loadConfig()));
