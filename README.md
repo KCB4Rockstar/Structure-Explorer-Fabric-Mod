@@ -6,7 +6,7 @@ I wanted to make a server that incentivized exploring all areas of the world, an
 
 It works by automatically checking every 5s (by default), any moving players, to see if they are within a structure, and adds that to a list of discovered structures for that player.
 
-## Commands
+## ⌨ Commands
 
 Primary command: `/explorer` — Alias: `/discoveries`
 
@@ -22,7 +22,7 @@ Primary command: `/explorer` — Alias: `/discoveries`
 
 ---
 
-## Config File — `structure_explorer.json`
+## 📝 Config File — `structure_explorer.json`
 
 Located at: `config/structure_explorer/structure_explorer.json`
 
@@ -35,9 +35,11 @@ Located at: `config/structure_explorer/structure_explorer.json`
 
 ---
 
-## Translations
+## 🗣 Translations
 
-Vanilla structure names are now properly named by default. Methods of translating them from other mods can be done following the instructions below.
+Vanilla structure names are now properly named by default.  
+e.g. `minecraft:fortress` ➡ **Nether Fortress**  
+Methods of translating them from other mods can be done following the instructions below.  
 
 ## Translations Folder — `translations/`
 
@@ -187,7 +189,7 @@ Result: **Armory [Katter's Structures]**
 
 ---
 
-## For Mod Makers
+## 🛠 For Mod Makers
 
 Mod makers can bundle translations inside their mod jar so they load automatically with zero setup for the user:
 
