@@ -8,28 +8,24 @@ import com.mojang.brigadier.tree.LiteralCommandNode;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.commands.arguments.DimensionArgument;
-import net.minecraft.commands.arguments.coordinates.Coordinates;
-import net.minecraft.commands.arguments.coordinates.Vec3Argument;
-import net.minecraft.commands.arguments.coordinates.WorldCoordinates;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.contents.PlainTextContents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.levelgen.structure.Structure;
-import net.minecraft.world.level.levelgen.structure.StructureStart;
 
 import in.fellaguy.StructureExplorer.PlayerStructureData;
+import in.fellaguy.StructureExplorer.PlayerStructureData.StructureInstance;
 import in.fellaguy.StructureExplorer.PlayerNameCache;
+import in.fellaguy.StructureExplorer.StructureExplorer;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -39,9 +35,8 @@ import java.util.Map;
 
 public class SECommand {
     private static final int ITEMS_PER_PAGE = 8;
-    
+
     public static void createCommand(CommandDispatcher<CommandSourceStack> dispatcher, Runnable reloadConfig) {
-        // /discoveries — list structures for the calling player
         LiteralCommandNode<CommandSourceStack> visitsSource = dispatcher.register(
             Commands.literal("discoveries")
                 .requires(Commands.hasPermission(Commands.LEVEL_ALL))
@@ -66,7 +61,7 @@ public class SECommand {
                     )
                 )
 
-                // /discoveries structure <structureId>
+                // /discoveries structure <structureId> — list all players who found it
                 .then(Commands.literal("structure")
                     .then(Commands.argument("structureId", StringArgumentType.string())
                         .executes(cs -> {
@@ -81,7 +76,7 @@ public class SECommand {
                     )
                 )
 
-                // /discoveries player <playername>
+                // /discoveries player <name>
                 .then(Commands.literal("player")
                     .then(Commands.argument("player", StringArgumentType.string())
                         .suggests((cs, builder) -> {
@@ -133,10 +128,176 @@ public class SECommand {
                         return 1;
                     })
                 )
+
+                // /discoveries info <structureId> — shows options panel (triggered by clicking a structure name)
+                .then(Commands.literal("info")
+                    .then(Commands.argument("structureId", StringArgumentType.string())
+                        .executes(cs -> {
+                            String str = StringArgumentType.getString(cs, "structureId");
+                            Identifier structureId = Identifier.tryParse(str);
+                            if (structureId == null) {
+                                cs.getSource().sendFailure(Component.literal("Invalid structure ID: " + str));
+                                return 0;
+                            }
+                            return showStructureInfo(cs, structureId);
+                        })
+                    )
+                )
+
+                // /discoveries instances <structureId> [page <n>] — paginated instance list for calling player
+                .then(Commands.literal("instances")
+                    .then(Commands.argument("structureId", StringArgumentType.string())
+                        .executes(cs -> {
+                            if (!cs.getSource().isPlayer()) {
+                                cs.getSource().sendSuccess(() -> Component.literal("A player must run this command."), false);
+                                return 0;
+                            }
+                            String str = StringArgumentType.getString(cs, "structureId");
+                            Identifier structureId = Identifier.tryParse(str);
+                            if (structureId == null) return 0;
+                            return showInstances(cs, structureId, 1);
+                        })
+                        .then(Commands.literal("page")
+                            .then(Commands.argument("page", IntegerArgumentType.integer(1))
+                                .executes(cs -> {
+                                    if (!cs.getSource().isPlayer()) {
+                                        cs.getSource().sendSuccess(() -> Component.literal("A player must run this command."), false);
+                                        return 0;
+                                    }
+                                    String str = StringArgumentType.getString(cs, "structureId");
+                                    Identifier structureId = Identifier.tryParse(str);
+                                    if (structureId == null) return 0;
+                                    return showInstances(cs, structureId, IntegerArgumentType.getInteger(cs, "page"));
+                                })
+                            )
+                        )
+                    )
+                )
         );
 
         dispatcher.register(Commands.literal("discoveries").redirect(visitsSource));
     }
+
+    // --- Info panel ---
+
+    private static int showStructureInfo(CommandContext<CommandSourceStack> cs, Identifier structureId) {
+        MutableComponent line1 = Component.literal(structureId.toString())
+            .withStyle(ChatFormatting.GOLD)
+            .append(Component.literal(" | OPTIONS").withStyle(ChatFormatting.GRAY));
+        cs.getSource().sendSuccess(() -> line1, false);
+
+        MutableComponent showPlayers = Component.literal("[Show Players]")
+            .withStyle(style -> style
+                .withColor(ChatFormatting.AQUA)
+                .withBold(true)
+                .withClickEvent(new ClickEvent.RunCommand("/discoveries structure \"" + structureId + "\""))
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Show all players who discovered this structure")))
+            );
+
+        MutableComponent showInstances = Component.literal(" [Show Instances]")
+            .withStyle(style -> style
+                .withColor(ChatFormatting.YELLOW)
+                .withBold(true)
+                .withClickEvent(new ClickEvent.RunCommand("/discoveries instances \"" + structureId + "\""))
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Show your instances of this structure")))
+            );
+
+        cs.getSource().sendSuccess(() -> Component.empty().append(showPlayers).append(showInstances), false);
+        return 1;
+    }
+
+    // --- Instance list ---
+
+    private static int showInstances(CommandContext<CommandSourceStack> cs, Identifier structureId, int page) {
+        ServerPlayer player = cs.getSource().getPlayer();
+        MinecraftServer server = cs.getSource().getServer();
+        PlayerStructureData data = PlayerStructureData.get(server);
+
+        boolean hasDiscovered = data.hasDiscovered(player.getUUID(), structureId);
+        List<StructureInstance> instances = new ArrayList<>(data.getInstances(player.getUUID(), structureId));
+
+        String playerName = player.getScoreboardName();
+        int totalInstances = instances.size();
+        String instanceWord = totalInstances == 1 ? "Instance" : "Instances";
+
+        MutableComponent header = Component.literal(totalInstances + " " + instanceWord + " of ")
+            .append(Component.literal(structureId.toString()).withStyle(ChatFormatting.GOLD))
+            .append(Component.literal(" found by "))
+            .append(Component.literal(playerName).withStyle(ChatFormatting.AQUA));
+        cs.getSource().sendSuccess(() -> header, false);
+
+        if (!hasDiscovered) {
+            cs.getSource().sendSuccess(() -> Component.literal("You have not discovered this structure yet.").withStyle(ChatFormatting.GRAY), false);
+            return 1;
+        }
+
+        if (totalInstances == 0) {
+            cs.getSource().sendSuccess(() -> Component.literal("No instances recorded. Revisit this structure to log it.").withStyle(ChatFormatting.GRAY), false);
+            return 1;
+        }
+
+        int totalPages = (int) Math.ceil((double) totalInstances / ITEMS_PER_PAGE);
+        if (page > totalPages || page < 1) {
+            cs.getSource().sendFailure(Component.literal("Invalid page number. Total pages: " + totalPages));
+            return 0;
+        }
+
+        int startIndex = (page - 1) * ITEMS_PER_PAGE;
+        int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalInstances);
+
+        for (int i = startIndex; i < endIndex; i++) {
+            StructureInstance inst = instances.get(i);
+            String tsText = inst.timestamp != null
+                ? formatTimestamp(inst.timestamp)
+                : "No date stored, revisit to add a new date.";
+            String posText = inst.origin != null
+                ? "[" + inst.origin.getX() + " " + inst.origin.getY() + " " + inst.origin.getZ() + "]"
+                : "";
+            String line = tsText + (posText.isEmpty() ? "" : " " + posText);
+            cs.getSource().sendSuccess(() -> Component.literal(line).withStyle(ChatFormatting.WHITE), false);
+        }
+
+        int printed = endIndex - startIndex;
+        for (int p = printed; p < ITEMS_PER_PAGE; p++) {
+            cs.getSource().sendSuccess(() -> Component.literal(""), false);
+        }
+
+        String encodedId = "\"" + structureId + "\"";
+        MutableComponent footer = Component.empty();
+
+        if (page > 1) {
+            String prevCmd = "/discoveries instances " + encodedId + " page " + (page - 1);
+            footer.append(Component.literal("[Previous] ").withStyle(style -> style
+                .withColor(ChatFormatting.YELLOW).withBold(true)
+                .withClickEvent(new ClickEvent.RunCommand(prevCmd))
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page - 1))))));
+        } else {
+            footer.append(Component.literal("[Previous] ").withStyle(ChatFormatting.GRAY));
+        }
+
+        footer.append(Component.literal("Page " + page + "/" + totalPages + " ").withStyle(ChatFormatting.WHITE));
+
+        if (page < totalPages) {
+            String nextCmd = "/discoveries instances " + encodedId + " page " + (page + 1);
+            footer.append(Component.literal("[Next]").withStyle(style -> style
+                .withColor(ChatFormatting.YELLOW).withBold(true)
+                .withClickEvent(new ClickEvent.RunCommand(nextCmd))
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page + 1))))));
+        } else {
+            footer.append(Component.literal("[Next]").withStyle(ChatFormatting.GRAY));
+        }
+
+        cs.getSource().sendSuccess(() -> footer, false);
+        return 1;
+    }
+
+    private static String formatTimestamp(Instant timestamp) {
+        LocalDateTime dt = LocalDateTime.ofInstant(timestamp, ZoneId.systemDefault());
+        String pattern = StructureExplorer.useMonthDayYear ? "MM/dd/yyyy HH:mm:ss" : "dd/MM/yyyy HH:mm:ss";
+        return dt.format(DateTimeFormatter.ofPattern(pattern));
+    }
+
+    // --- Players for structure ---
 
     private static int listPlayersForStructure(CommandContext<CommandSourceStack> cs, Identifier structureId) {
         MinecraftServer server = cs.getSource().getServer();
@@ -163,8 +324,10 @@ public class SECommand {
         return 1;
     }
 
+    // --- Paginated structure list ---
+
     private static int getTotalStructureCount(MinecraftServer server) {
-        return server.registryAccess().lookupOrThrow(Registries.STRUCTURE).size();
+        return server.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.STRUCTURE).size();
     }
 
     private static int sendPaginatedStructures(CommandContext<CommandSourceStack> cs, UUID playerUuid, String playerName, int page) {
@@ -189,14 +352,12 @@ public class SECommand {
         boolean isSelf = cs.getSource().isPlayer() && cs.getSource().getPlayer().getUUID().equals(playerUuid);
         String baseCommandPrefix = isSelf ? "/discoveries page " : "/discoveries player " + playerName + " page ";
 
-        // LINE 1: Header
         int total = getTotalStructureCount(server);
         MutableComponent header = Component.literal(totalItems + "/" + total + " Structures discovered by ")
             .append(Component.literal(playerName).withStyle(ChatFormatting.AQUA))
             .append(Component.literal(":"));
         cs.getSource().sendSuccess(() -> header, false);
 
-        // LINES 2-9: Content
         int startIndex = (page - 1) * ITEMS_PER_PAGE;
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
 
@@ -207,25 +368,19 @@ public class SECommand {
             cs.getSource().sendSuccess(() -> lineItem, false);
         }
 
-        // Pad remaining lines if last page has fewer than 8 entries
         int printedLines = endIndex - startIndex;
         for (int p = printedLines; p < ITEMS_PER_PAGE; p++) {
             cs.getSource().sendSuccess(() -> Component.literal(""), false);
         }
 
-        // LINE 10: Footer
         MutableComponent footer = Component.empty();
 
         if (page > 1) {
             String prevCommand = baseCommandPrefix + (page - 1);
-            MutableComponent prevButton = Component.literal("[Previous] ")
-                .withStyle(style -> style
-                    .withColor(ChatFormatting.YELLOW)
-                    .withBold(true)
-                    .withClickEvent(new ClickEvent.RunCommand(prevCommand))
-                    .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page - 1))))
-                );
-            footer.append(prevButton);
+            footer.append(Component.literal("[Previous] ").withStyle(style -> style
+                .withColor(ChatFormatting.YELLOW).withBold(true)
+                .withClickEvent(new ClickEvent.RunCommand(prevCommand))
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page - 1))))));
         } else {
             footer.append(Component.literal("[Previous] ").withStyle(ChatFormatting.GRAY));
         }
@@ -234,14 +389,10 @@ public class SECommand {
 
         if (page < totalPages) {
             String nextCommand = baseCommandPrefix + (page + 1);
-            MutableComponent nextButton = Component.literal("[Next]")
-                .withStyle(style -> style
-                    .withColor(ChatFormatting.YELLOW)
-                    .withBold(true)
-                    .withClickEvent(new ClickEvent.RunCommand(nextCommand))
-                    .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page + 1))))
-                );
-            footer.append(nextButton);
+            footer.append(Component.literal("[Next]").withStyle(style -> style
+                .withColor(ChatFormatting.YELLOW).withBold(true)
+                .withClickEvent(new ClickEvent.RunCommand(nextCommand))
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page + 1))))));
         } else {
             footer.append(Component.literal("[Next]").withStyle(ChatFormatting.GRAY));
         }
@@ -250,10 +401,11 @@ public class SECommand {
         return 1;
     }
 
+    // --- Leaderboard ---
+
     private static int sendLeaderboard(CommandContext<CommandSourceStack> cs, int page) {
         MinecraftServer server = cs.getSource().getServer();
         PlayerNameCache nameCache = PlayerNameCache.get(server);
-
         List<Map.Entry<UUID, Integer>> leaderboard = PlayerStructureData.get(server).getLeaderboard();
 
         if (leaderboard.isEmpty()) {
@@ -269,12 +421,8 @@ public class SECommand {
             return 0;
         }
 
-        // LINE 1: Header
-        MutableComponent header = Component.literal("Structure Discovery Leaderboard")
-            .withStyle(ChatFormatting.GOLD);
-        cs.getSource().sendSuccess(() -> header, false);
+        cs.getSource().sendSuccess(() -> Component.literal("Structure Discovery Leaderboard").withStyle(ChatFormatting.GOLD), false);
 
-        // LINES 2-9: Content
         int startIndex = (page - 1) * ITEMS_PER_PAGE;
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
 
@@ -291,24 +439,19 @@ public class SECommand {
             cs.getSource().sendSuccess(() -> line, false);
         }
 
-        // Pad remaining lines
         int printedLines = endIndex - startIndex;
         for (int p = printedLines; p < ITEMS_PER_PAGE; p++) {
             cs.getSource().sendSuccess(() -> Component.literal(""), false);
         }
 
-        // LINE 10: Footer
         MutableComponent footer = Component.empty();
 
         if (page > 1) {
             String prevCommand = "/discoveries leaderboard page " + (page - 1);
-            footer.append(Component.literal("[Previous] ")
-                .withStyle(style -> style
-                    .withColor(ChatFormatting.YELLOW)
-                    .withBold(true)
-                    .withClickEvent(new ClickEvent.RunCommand(prevCommand))
-                    .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page - 1))))
-                ));
+            footer.append(Component.literal("[Previous] ").withStyle(style -> style
+                .withColor(ChatFormatting.YELLOW).withBold(true)
+                .withClickEvent(new ClickEvent.RunCommand(prevCommand))
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page - 1))))));
         } else {
             footer.append(Component.literal("[Previous] ").withStyle(ChatFormatting.GRAY));
         }
@@ -317,13 +460,10 @@ public class SECommand {
 
         if (page < totalPages) {
             String nextCommand = "/discoveries leaderboard page " + (page + 1);
-            footer.append(Component.literal("[Next]")
-                .withStyle(style -> style
-                    .withColor(ChatFormatting.YELLOW)
-                    .withBold(true)
-                    .withClickEvent(new ClickEvent.RunCommand(nextCommand))
-                    .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page + 1))))
-                ));
+            footer.append(Component.literal("[Next]").withStyle(style -> style
+                .withColor(ChatFormatting.YELLOW).withBold(true)
+                .withClickEvent(new ClickEvent.RunCommand(nextCommand))
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page + 1))))));
         } else {
             footer.append(Component.literal("[Next]").withStyle(ChatFormatting.GRAY));
         }
@@ -332,12 +472,15 @@ public class SECommand {
         return 1;
     }
 
+    // --- Shared ---
+
+    // Clicking a structure name opens the info/options panel
     public static MutableComponent clickableStructure(Identifier structureId) {
         return Component.literal(structureId.toString())
             .withStyle(style -> style
                 .withColor(ChatFormatting.GOLD)
-                .withClickEvent(new ClickEvent.RunCommand("/discoveries structure \"" + structureId + "\""))
-                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to see all discoverers")))
+                .withClickEvent(new ClickEvent.RunCommand("/discoveries info \"" + structureId + "\""))
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click for options")))
             );
     }
 }

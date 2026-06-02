@@ -11,6 +11,7 @@ public class ModConfig {
 
     public long checkIntervalMs = 5000;
     public boolean showNthDiscoverer = true;
+    public boolean useMonthDayYear = false;
 
     private static ModConfig instance = new ModConfig();
 

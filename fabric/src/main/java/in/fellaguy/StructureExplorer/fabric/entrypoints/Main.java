@@ -10,20 +10,20 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.core.Registry;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import net.minecraft.network.chat.MutableComponent;
 
@@ -33,11 +33,11 @@ public class Main implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        ModConfig.load(FabricLoader.getInstance().getConfigDir());
+        loadConfig();
         StructureExplorer.init();
+
         CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, dedicated) ->
-            SECommand.createCommand(dispatcher,
-                () -> ModConfig.load(FabricLoader.getInstance().getConfigDir())));
+            SECommand.createCommand(dispatcher, () -> loadConfig()));
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             PlayerNameCache.get(server).update(
@@ -65,38 +65,56 @@ public class Main implements ModInitializer {
                 if (currentChunk.equals(lastCheckedChunk.get(player.getUUID()))) continue;
                 lastCheckedChunk.put(player.getUUID(), currentChunk);
 
-                Set<Identifier> known = data.getStructuresForPlayer(player.getUUID());
-
                 List<StructureStart> starts = player.level()
                     .structureManager()
                     .startsForStructure(currentChunk, s -> true);
 
                 for (StructureStart start : starts) {
                     Identifier key = structureRegistry.getKey(start.getStructure());
-                    if (key == null || known.contains(key)) continue;
+                    if (key == null) continue;
                     if (!start.getBoundingBox().isInside(player.blockPosition())) continue;
 
-                    int discoverersBefore = data.getPlayersForStructure(key).size();
-                    data.add(player.getUUID(), key);
-                    int visited = known.size() + 1;
+                    BlockPos origin = new BlockPos(
+                        start.getBoundingBox().minX(),
+                        start.getBoundingBox().minY(),
+                        start.getBoundingBox().minZ()
+                    );
+                    Instant now = Instant.now();
 
-                    MutableComponent msg = SECommand.clickableStructure(key)
-                        .append(Component.literal(" [New discovery!] (" + visited + "/" + total + ")")
-                            .withStyle(ChatFormatting.GREEN));
+                    if (!data.hasDiscovered(player.getUUID(), key)) {
+                        int discoverersBefore = data.getPlayersForStructure(key).size();
+                        data.addDiscovery(player.getUUID(), key, origin, now);
+                        int visited = data.getStructuresForPlayer(player.getUUID()).size();
 
-                    if (ModConfig.get().showNthDiscoverer) {
-                        if (discoverersBefore == 0) {
-                            msg.append(Component.literal(" [First Discoverer!]").withStyle(ChatFormatting.AQUA));
-                        } else {
-                            int nth = discoverersBefore + 1;
-                            msg.append(Component.literal(" [" + nth + getOrdinalSuffix(nth) + " Discoverer]").withStyle(ChatFormatting.YELLOW));
+                        MutableComponent msg = SECommand.clickableStructure(key)
+                            .append(Component.literal(" [New discovery!] (" + visited + "/" + total + ")")
+                                .withStyle(ChatFormatting.GREEN));
+
+                        if (ModConfig.get().showNthDiscoverer) {
+                            if (discoverersBefore == 0) {
+                                msg.append(Component.literal(" [First Discoverer!]").withStyle(ChatFormatting.AQUA));
+                            } else {
+                                int nth = discoverersBefore + 1;
+                                msg.append(Component.literal(" [" + nth + getOrdinalSuffix(nth) + " Discoverer]").withStyle(ChatFormatting.YELLOW));
+                            }
                         }
-                    }
 
-                    player.sendSystemMessage(msg, false);
+                        player.sendSystemMessage(msg, false);
+
+                    } else if (!data.hasInstance(player.getUUID(), key, origin)) {
+                        data.addInstance(player.getUUID(), key, origin, now);
+
+                    } else {
+                        data.updateTimestamp(player.getUUID(), key, origin, now);
+                    }
                 }
             }
         });
+    }
+
+    private static void loadConfig() {
+        ModConfig.load(FabricLoader.getInstance().getConfigDir());
+        StructureExplorer.useMonthDayYear = ModConfig.get().useMonthDayYear;
     }
 
     private static String getOrdinalSuffix(int n) {
