@@ -13,9 +13,14 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.levelgen.structure.Structure;
+import net.minecraft.world.level.levelgen.structure.StructureStart;
 
 import in.fellaguy.StructureExplorer.PlayerStructureData;
 import in.fellaguy.StructureExplorer.PlayerStructureData.StructureInstance;
@@ -185,6 +190,17 @@ public class SECommand {
                             )
                         )
                     )
+                )
+
+                // /explorer here — show info for the structure the player is currently standing in
+                .then(Commands.literal("here")
+                    .executes(cs -> {
+                        if (!cs.getSource().isPlayer()) {
+                            cs.getSource().sendSuccess(() -> Component.literal("A player must run this command."), false);
+                            return 0;
+                        }
+                        return showHere(cs);
+                    })
                 )
 
                 // /explorer instances <structureId> [page <n>] — paginated instance list for calling player
@@ -632,6 +648,29 @@ public class SECommand {
         return 1;
     }
 
+    // --- Here ---
+
+    private static int showHere(CommandContext<CommandSourceStack> cs) {
+        ServerPlayer player = cs.getSource().getPlayer();
+        Registry<Structure> structureRegistry = cs.getSource().getServer().registryAccess()
+            .lookupOrThrow(Registries.STRUCTURE);
+
+        ChunkPos chunkPos = new ChunkPos(player.blockPosition());
+        java.util.List<StructureStart> starts = player.level()
+            .structureManager()
+            .startsForStructure(chunkPos, s -> true);
+
+        for (StructureStart start : starts) {
+            if (!start.getBoundingBox().isInside(player.blockPosition())) continue;
+            Identifier key = structureRegistry.getKey(start.getStructure());
+            if (key == null) continue;
+            return showStructureInfo(cs, key);
+        }
+
+        cs.getSource().sendSuccess(() -> Component.literal("You are not within a structure.").withStyle(ChatFormatting.GRAY), false);
+        return 1;
+    }
+
     // --- Shared ---
 
     // Clicking a structure name opens the info/options panel
@@ -639,7 +678,7 @@ public class SECommand {
         return StructureTranslations.resolve(structureId)
             .withStyle(style -> style
                 .withClickEvent(new ClickEvent.RunCommand("/explorer info \"" + structureId + "\""))
-                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click for options")))
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click for options | " + structureId)))
             );
     }
 }
