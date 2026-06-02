@@ -13,6 +13,12 @@ public class ModConfig {
     public boolean showNthDiscoverer = true;
     public boolean useMonthDayYear = false;
     public boolean trackInstances = true;
+    public Sounds sounds = new Sounds();
+
+    public static class Sounds {
+        public boolean newDiscoverySound = true;
+        public boolean newInstanceSound = true;
+    }
 
     private static ModConfig instance = new ModConfig();
 
@@ -97,6 +103,16 @@ public class ModConfig {
             "    Whether to record coordinates and timestamps for each structure\n" +
             "    instance visited. When false, only which structure types have been\n" +
             "    discovered is tracked — no coordinates or timestamps are stored.\n" +
+            "\n" +
+            "sounds\n" +
+            "    Nested object containing sound toggles.\n" +
+            "\n" +
+            "    newDiscoverySound  (default: true)\n" +
+            "        Play a sound to the player when they discover a new structure.\n" +
+            "\n" +
+            "    newInstanceSound  (default: true)\n" +
+            "        Play a subtle sound when a new structure instance is recorded\n" +
+            "        (i.e. revisiting a structure type at a new location).\n" +
             "\n" +
             "================================================================\n" +
             "  TRANSLATIONS FOLDER: translations/\n" +

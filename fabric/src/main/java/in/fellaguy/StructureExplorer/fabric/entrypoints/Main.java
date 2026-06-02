@@ -23,6 +23,10 @@ import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.core.Registry;
+import net.minecraft.core.Holder;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -109,9 +113,20 @@ public class Main implements ModInitializer {
 
                         player.sendSystemMessage(msg, false);
 
+                        if (ModConfig.get().sounds.newDiscoverySound) {
+                            long seed = player.level().getRandom().nextLong();
+                            player.connection.send(new ClientboundSoundPacket(Holder.direct(SoundEvents.AMETHYST_BLOCK_CHIME), SoundSource.PLAYERS, player.getX(), player.getY(), player.getZ(), 1.0f, 2.0f, seed));
+                            player.connection.send(new ClientboundSoundPacket(SoundEvents.NOTE_BLOCK_CHIME, SoundSource.PLAYERS, player.getX(), player.getY(), player.getZ(), 1.0f, 2.0f, seed));
+                        }
+
                     } else if (ModConfig.get().trackInstances) {
                         if (!data.hasInstance(player.getUUID(), key, origin)) {
                             data.addInstance(player.getUUID(), key, origin, now);
+                            if (ModConfig.get().sounds.newInstanceSound) {
+                                long seed = player.level().getRandom().nextLong();
+                                player.connection.send(new ClientboundSoundPacket(SoundEvents.NOTE_BLOCK_CHIME, SoundSource.PLAYERS, player.getX(), player.getY(), player.getZ(), 0.2f, 2.0f, seed));
+                                player.connection.send(new ClientboundSoundPacket(SoundEvents.NOTE_BLOCK_BELL, SoundSource.PLAYERS, player.getX(), player.getY(), player.getZ(), 0.2f, 2.0f, seed));
+                            }
                         } else {
                             data.updateTimestamp(player.getUUID(), key, origin, now);
                         }
