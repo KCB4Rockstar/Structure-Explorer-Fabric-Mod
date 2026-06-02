@@ -10,6 +10,7 @@ import net.minecraft.resources.Identifier;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Locale;
 
 public class StructureTranslations {
     private static final TextColor DEFAULT_COLOR = TextColor.fromLegacyFormat(ChatFormatting.GOLD);
@@ -24,7 +25,8 @@ public class StructureTranslations {
         NamespaceTranslation ns = translations.get(structureId.getNamespace());
 
         if (ns == null || !ns.structures.containsKey(structureId.getPath())) {
-            return Component.literal(structureId.toString())
+            String readable = prettify(structureId.getPath()) + " [" + prettify(structureId.getNamespace()) + "]";
+            return Component.literal(readable)
                 .withStyle(style -> style.withColor(DEFAULT_COLOR));
         }
 
@@ -101,6 +103,20 @@ public class StructureTranslations {
 
     private static String getString(JsonObject obj, String key, String def) {
         return obj.has(key) ? obj.get(key).getAsString() : def;
+    }
+
+    // Replaces _ and / with spaces, then capitalises the first letter of every word.
+    // e.g. "the_bumblezone" → "The Bumblezone", "village/plains" → "Village Plains"
+    public static String prettify(String s) {
+        String[] words = s.replace("_", " ").replace("/", " ").split(" ");
+        StringBuilder sb = new StringBuilder();
+        for (String word : words) {
+            if (word.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(Character.toUpperCase(word.charAt(0)));
+            if (word.length() > 1) sb.append(word.substring(1).toLowerCase(Locale.ROOT));
+        }
+        return sb.toString();
     }
 
     public static TextColor parseColor(String s) {
