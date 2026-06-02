@@ -139,7 +139,7 @@ public class Main implements ModInitializer {
 
                         if (ModConfig.get().sounds.newDiscoverySound) {
                             if (discoverersBefore == 0) {
-                                playSound(player, Holder.direct(SoundEvents.PLAYER_LEVELUP), 1.0f, 1.5f);
+                                playSound(player, Holder.direct(SoundEvents.PLAYER_LEVELUP), 1.0f, 1.2f);
                             } else {
                                 playSound(player, Holder.direct(SoundEvents.EXPERIENCE_ORB_PICKUP), 1.0f, 1.5f);
                             }
