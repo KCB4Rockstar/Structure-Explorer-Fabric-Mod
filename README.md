@@ -1,5 +1,11 @@
 # Structure Explorer
 
+**This mod adds incentive to players to try and discover all the structures there are in the world!**
+
+I wanted to make a server that incentivized exploring all areas of the world, and with more structures being added every few months, but I couldn't find any mod that tracked the discovered structures. I tried making it for myself many moons ago and failed, but tried again and got it done in just two days.
+
+It works by automatically checking every 5s (by default), any moving players, to see if they are within a structure, and adds that to a list of discovered structures for that player.
+
 ## Commands
 
 Primary command: `/explorer` — Alias: `/discoveries`
@@ -28,6 +34,10 @@ Located at: `config/structure_explorer/structure_explorer.json`
 | `trackInstances` | `true` | Whether to record coordinates and timestamps for each structure instance visited. When `false`, only which structure *types* have been discovered is tracked. |
 
 ---
+
+## Translations
+
+Vanilla structure names are now properly named by default. Methods of translating them from other mods can be done following the instructions below.
 
 ## Translations Folder — `translations/`
 
@@ -60,6 +70,8 @@ Files can be named anything — e.g. `minecraft.json`, `custom.json`.
   }
 }
 ```
+
+Here is an example, using the [Minecraft Vanilla Locations](https://github.com/KCB4Rockstar/Structure-Explorer-Fabric-Mod/blob/master/fabric/src/main/resources/data/structureexplorer/structure_explorer/translations.json)
 
 ---
 
@@ -199,3 +211,5 @@ your-datapack
 ```
 
 Bundled mod translations load **before** `config/translations/` files, so server admins can always override them by placing their own file in the translations folder.
+
+I couldn't have started making this mod without modifying and learning from the [WITS mod](https://github.com/TelepathicGrunt/WITS) by TelepathicGrunt
