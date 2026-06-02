@@ -144,6 +144,48 @@ public class SECommand {
                     )
                 )
 
+                // /discoveries playerinstances <player> <structureId> [page <n>] — OP: view any player's instances
+                .then(Commands.literal("playerinstances")
+                    .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                    .then(Commands.argument("player", StringArgumentType.string())
+                        .suggests((cs, builder) -> {
+                            PlayerNameCache.get(cs.getSource().getServer()).getAllNames()
+                                .forEach(builder::suggest);
+                            return builder.buildFuture();
+                        })
+                        .then(Commands.argument("structureId", StringArgumentType.string())
+                            .executes(cs -> {
+                                String name = StringArgumentType.getString(cs, "player");
+                                UUID uuid = PlayerNameCache.get(cs.getSource().getServer()).resolveUUID(name);
+                                if (uuid == null) {
+                                    cs.getSource().sendFailure(Component.literal("Unknown player: " + name));
+                                    return 0;
+                                }
+                                String str = StringArgumentType.getString(cs, "structureId");
+                                Identifier structureId = Identifier.tryParse(str);
+                                if (structureId == null) return 0;
+                                return showAdminInstances(cs, uuid, name, structureId, 1);
+                            })
+                            .then(Commands.literal("page")
+                                .then(Commands.argument("page", IntegerArgumentType.integer(1))
+                                    .executes(cs -> {
+                                        String name = StringArgumentType.getString(cs, "player");
+                                        UUID uuid = PlayerNameCache.get(cs.getSource().getServer()).resolveUUID(name);
+                                        if (uuid == null) {
+                                            cs.getSource().sendFailure(Component.literal("Unknown player: " + name));
+                                            return 0;
+                                        }
+                                        String str = StringArgumentType.getString(cs, "structureId");
+                                        Identifier structureId = Identifier.tryParse(str);
+                                        if (structureId == null) return 0;
+                                        return showAdminInstances(cs, uuid, name, structureId, IntegerArgumentType.getInteger(cs, "page"));
+                                    })
+                                )
+                            )
+                        )
+                    )
+                )
+
                 // /discoveries instances <structureId> [page <n>] — paginated instance list for calling player
                 .then(Commands.literal("instances")
                     .then(Commands.argument("structureId", StringArgumentType.string())
@@ -220,7 +262,9 @@ public class SECommand {
         int totalInstances = instances.size();
         String instanceWord = totalInstances == 1 ? "Instance" : "Instances";
 
-        MutableComponent header = Component.literal(totalInstances + " " + instanceWord + " of ")
+        MutableComponent header = Component.literal("").
+            append(Component.literal(String.valueOf(totalInstances)).withStyle(ChatFormatting.YELLOW))
+            .append(Component.literal(" " + instanceWord + " of "))
             .append(Component.literal(structureId.toString()).withStyle(ChatFormatting.GOLD))
             .append(Component.literal(" found by "))
             .append(Component.literal(playerName).withStyle(ChatFormatting.AQUA));
@@ -232,7 +276,10 @@ public class SECommand {
         }
 
         if (totalInstances == 0) {
-            cs.getSource().sendSuccess(() -> Component.literal("No instances recorded. Revisit this structure to log it.").withStyle(ChatFormatting.GRAY), false);
+            String noInstanceMsg = StructureExplorer.trackInstances
+                ? "No instances recorded. Revisit this structure to log it."
+                : "Instance tracking is not enabled.";
+            cs.getSource().sendSuccess(() -> Component.literal(noInstanceMsg).withStyle(ChatFormatting.GRAY), false);
             return 1;
         }
 
@@ -245,16 +292,10 @@ public class SECommand {
         int startIndex = (page - 1) * ITEMS_PER_PAGE;
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalInstances);
 
+        boolean isOp = Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(cs.getSource());
         for (int i = startIndex; i < endIndex; i++) {
             StructureInstance inst = instances.get(i);
-            String tsText = inst.timestamp != null
-                ? formatTimestamp(inst.timestamp)
-                : "No date stored, revisit to add a new date.";
-            String posText = inst.origin != null
-                ? "[" + inst.origin.getX() + " " + inst.origin.getY() + " " + inst.origin.getZ() + "]"
-                : "";
-            String line = tsText + (posText.isEmpty() ? "" : " " + posText);
-            cs.getSource().sendSuccess(() -> Component.literal(line).withStyle(ChatFormatting.WHITE), false);
+            cs.getSource().sendSuccess(() -> instanceLine(inst, isOp), false);
         }
 
         int printed = endIndex - startIndex;
@@ -279,6 +320,112 @@ public class SECommand {
 
         if (page < totalPages) {
             String nextCmd = "/discoveries instances " + encodedId + " page " + (page + 1);
+            footer.append(Component.literal("[Next]").withStyle(style -> style
+                .withColor(ChatFormatting.YELLOW).withBold(true)
+                .withClickEvent(new ClickEvent.RunCommand(nextCmd))
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page + 1))))));
+        } else {
+            footer.append(Component.literal("[Next]").withStyle(ChatFormatting.GRAY));
+        }
+
+        cs.getSource().sendSuccess(() -> footer, false);
+        return 1;
+    }
+
+    // Builds a single instance line. adminMode=true makes coords clickable (suggest /tp)
+    private static MutableComponent instanceLine(StructureInstance inst, boolean adminMode) {
+        MutableComponent line = Component.empty();
+
+        if (inst.timestamp != null) {
+            line.append(Component.literal(formatTimestamp(inst.timestamp)).withStyle(ChatFormatting.DARK_AQUA));
+        } else {
+            line.append(Component.literal("No date stored, revisit to add a new date.").withStyle(ChatFormatting.GRAY));
+        }
+
+        if (inst.origin != null) {
+            int x = inst.origin.getX(), y = inst.origin.getY(), z = inst.origin.getZ();
+            String coordText = " [" + x + " " + y + " " + z + "]";
+            MutableComponent coords = Component.literal(coordText).withStyle(ChatFormatting.GREEN);
+            if (adminMode) {
+                String tpCmd = "/tp " + x + " " + y + " " + z;
+                coords = coords.withStyle(style -> style
+                    .withClickEvent(new ClickEvent.SuggestCommand(tpCmd))
+                    .withHoverEvent(new HoverEvent.ShowText(Component.literal(tpCmd)))
+                );
+            }
+            line.append(coords);
+        }
+
+        return line;
+    }
+
+    private static int showAdminInstances(CommandContext<CommandSourceStack> cs, UUID targetUuid, String targetName, Identifier structureId, int page) {
+        MinecraftServer server = cs.getSource().getServer();
+        PlayerStructureData data = PlayerStructureData.get(server);
+
+        boolean hasDiscovered = data.hasDiscovered(targetUuid, structureId);
+        List<StructureInstance> instances = new ArrayList<>(data.getInstances(targetUuid, structureId));
+        int totalInstances = instances.size();
+        String instanceWord = totalInstances == 1 ? "Instance" : "Instances";
+
+        MutableComponent header = Component.literal("")
+            .append(Component.literal(String.valueOf(totalInstances)).withStyle(ChatFormatting.YELLOW))
+            .append(Component.literal(" " + instanceWord + " of "))
+            .append(Component.literal(structureId.toString()).withStyle(ChatFormatting.GOLD))
+            .append(Component.literal(" found by "))
+            .append(Component.literal(targetName).withStyle(ChatFormatting.AQUA));
+        cs.getSource().sendSuccess(() -> header, false);
+
+        if (!hasDiscovered) {
+            cs.getSource().sendSuccess(() -> Component.literal("This player has not discovered this structure.").withStyle(ChatFormatting.GRAY), false);
+            return 1;
+        }
+
+        if (totalInstances == 0) {
+            String noInstanceMsg = StructureExplorer.trackInstances
+                ? "No instances recorded. Player must revisit to log them."
+                : "Instance tracking is not enabled.";
+            cs.getSource().sendSuccess(() -> Component.literal(noInstanceMsg).withStyle(ChatFormatting.GRAY), false);
+            return 1;
+        }
+
+        int totalPages = (int) Math.ceil((double) totalInstances / ITEMS_PER_PAGE);
+        if (page > totalPages || page < 1) {
+            cs.getSource().sendFailure(Component.literal("Invalid page number. Total pages: " + totalPages));
+            return 0;
+        }
+
+        int startIndex = (page - 1) * ITEMS_PER_PAGE;
+        int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalInstances);
+
+        for (int i = startIndex; i < endIndex; i++) {
+            StructureInstance inst = instances.get(i);
+            cs.getSource().sendSuccess(() -> instanceLine(inst, true), false);
+        }
+
+        int printed = endIndex - startIndex;
+        for (int p = printed; p < ITEMS_PER_PAGE; p++) {
+            cs.getSource().sendSuccess(() -> Component.literal(""), false);
+        }
+
+        String encodedId = "\"" + structureId + "\"";
+        String encodedPlayer = "\"" + targetName + "\"";
+        MutableComponent footer = Component.empty();
+
+        if (page > 1) {
+            String prevCmd = "/discoveries playerinstances " + encodedPlayer + " " + encodedId + " page " + (page - 1);
+            footer.append(Component.literal("[Previous] ").withStyle(style -> style
+                .withColor(ChatFormatting.YELLOW).withBold(true)
+                .withClickEvent(new ClickEvent.RunCommand(prevCmd))
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + (page - 1))))));
+        } else {
+            footer.append(Component.literal("[Previous] ").withStyle(ChatFormatting.GRAY));
+        }
+
+        footer.append(Component.literal("Page " + page + "/" + totalPages + " ").withStyle(ChatFormatting.WHITE));
+
+        if (page < totalPages) {
+            String nextCmd = "/discoveries playerinstances " + encodedPlayer + " " + encodedId + " page " + (page + 1);
             footer.append(Component.literal("[Next]").withStyle(style -> style
                 .withColor(ChatFormatting.YELLOW).withBold(true)
                 .withClickEvent(new ClickEvent.RunCommand(nextCmd))
@@ -350,10 +497,13 @@ public class SECommand {
         }
 
         boolean isSelf = cs.getSource().isPlayer() && cs.getSource().getPlayer().getUUID().equals(playerUuid);
+        boolean isOp = Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(cs.getSource());
         String baseCommandPrefix = isSelf ? "/discoveries page " : "/discoveries player " + playerName + " page ";
 
         int total = getTotalStructureCount(server);
-        MutableComponent header = Component.literal(totalItems + "/" + total + " Structures discovered by ")
+        MutableComponent header = Component.literal("")
+            .append(Component.literal(totalItems + "/" + total).withStyle(ChatFormatting.YELLOW))
+            .append(Component.literal(" Structures discovered by "))
             .append(Component.literal(playerName).withStyle(ChatFormatting.AQUA))
             .append(Component.literal(":"));
         cs.getSource().sendSuccess(() -> header, false);
@@ -365,6 +515,16 @@ public class SECommand {
             Identifier structureId = structures.get(i);
             MutableComponent lineItem = Component.literal(" - ").withStyle(ChatFormatting.RESET)
                 .append(clickableStructure(structureId));
+            if (isOp) {
+                String cmd = "/discoveries playerinstances \"" + playerName + "\" \"" + structureId + "\"";
+                lineItem.append(Component.literal(" [Show Instances]")
+                    .withStyle(style -> style
+                        .withColor(ChatFormatting.YELLOW)
+                        .withClickEvent(new ClickEvent.RunCommand(cmd))
+                        .withHoverEvent(new HoverEvent.ShowText(Component.literal("View " + playerName + "'s instances of this structure")))
+                    )
+                );
+            }
             cs.getSource().sendSuccess(() -> lineItem, false);
         }
 

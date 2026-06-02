@@ -12,6 +12,7 @@ public class ModConfig {
     public long checkIntervalMs = 5000;
     public boolean showNthDiscoverer = true;
     public boolean useMonthDayYear = false;
+    public boolean trackInstances = true;
 
     private static ModConfig instance = new ModConfig();
 
@@ -32,6 +33,10 @@ public class ModConfig {
             } catch (IOException e) {
                 instance = new ModConfig();
             }
+            // Write back so any fields added in newer versions appear in the file
+            try (Writer writer = new FileWriter(file)) {
+                GSON.toJson(instance, writer);
+            } catch (IOException ignored) {}
         } else {
             instance = new ModConfig();
             try {

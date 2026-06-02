@@ -146,6 +146,14 @@ public class PlayerStructureData extends SavedData {
 
     // --- Mutation methods ---
 
+    // Creates the key only (no instance) — used when trackInstances is disabled
+    public void addDiscoveryKey(UUID playerUuid, Identifier structureId) {
+        byPlayer.computeIfAbsent(playerUuid, k -> new HashMap<>())
+            .computeIfAbsent(structureId, k -> new ArrayList<>());
+        byStructure.computeIfAbsent(structureId, k -> new HashSet<>()).add(playerUuid);
+        setDirty();
+    }
+
     // Creates the key and adds the first instance — triggers the discovery announcement in caller
     public void addDiscovery(UUID playerUuid, Identifier structureId, BlockPos origin, Instant timestamp) {
         byPlayer.computeIfAbsent(playerUuid, k -> new HashMap<>())

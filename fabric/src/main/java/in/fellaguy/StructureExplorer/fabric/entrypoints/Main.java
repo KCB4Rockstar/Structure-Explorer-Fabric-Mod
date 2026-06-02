@@ -75,15 +75,19 @@ public class Main implements ModInitializer {
                     if (!start.getBoundingBox().isInside(player.blockPosition())) continue;
 
                     BlockPos origin = new BlockPos(
-                        start.getBoundingBox().minX(),
-                        start.getBoundingBox().minY(),
-                        start.getBoundingBox().minZ()
+                        (start.getBoundingBox().minX() + start.getBoundingBox().maxX()) / 2,
+                        (start.getBoundingBox().minY() + start.getBoundingBox().maxY()) / 2,
+                        (start.getBoundingBox().minZ() + start.getBoundingBox().maxZ()) / 2
                     );
                     Instant now = Instant.now();
 
                     if (!data.hasDiscovered(player.getUUID(), key)) {
                         int discoverersBefore = data.getPlayersForStructure(key).size();
-                        data.addDiscovery(player.getUUID(), key, origin, now);
+                        if (ModConfig.get().trackInstances) {
+                            data.addDiscovery(player.getUUID(), key, origin, now);
+                        } else {
+                            data.addDiscoveryKey(player.getUUID(), key);
+                        }
                         int visited = data.getStructuresForPlayer(player.getUUID()).size();
 
                         MutableComponent msg = SECommand.clickableStructure(key)
@@ -101,11 +105,12 @@ public class Main implements ModInitializer {
 
                         player.sendSystemMessage(msg, false);
 
-                    } else if (!data.hasInstance(player.getUUID(), key, origin)) {
-                        data.addInstance(player.getUUID(), key, origin, now);
-
-                    } else {
-                        data.updateTimestamp(player.getUUID(), key, origin, now);
+                    } else if (ModConfig.get().trackInstances) {
+                        if (!data.hasInstance(player.getUUID(), key, origin)) {
+                            data.addInstance(player.getUUID(), key, origin, now);
+                        } else {
+                            data.updateTimestamp(player.getUUID(), key, origin, now);
+                        }
                     }
                 }
             }
@@ -115,6 +120,7 @@ public class Main implements ModInitializer {
     private static void loadConfig() {
         ModConfig.load(FabricLoader.getInstance().getConfigDir());
         StructureExplorer.useMonthDayYear = ModConfig.get().useMonthDayYear;
+        StructureExplorer.trackInstances = ModConfig.get().trackInstances;
     }
 
     private static String getOrdinalSuffix(int n) {
