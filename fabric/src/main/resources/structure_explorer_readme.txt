@@ -162,10 +162,58 @@ Hex colors (CSS-style, prefix with #):
   }
 }
 
--- Mod maker support --
-Mod makers can bundle translations inside their mod jar at:
+================================================================
+  FOR MOD MAKERS
+================================================================
+
+Structure Explorer automatically reads structure names from your
+mod's existing lang file — no extra work required in most cases.
+
+----------------------------------------------------------------
+  OPTION 1: Lang file (simplest)
+----------------------------------------------------------------
+
+If your mod already has a lang file at:
+    resources/assets/<namespace>/lang/en_us.json
+
+Add entries using the key format:
+    "structure.<namespace>.<path>": "Display Name"
+
+Example:
+    "structure.mymod.cool_dungeon": "Cool Dungeon"
+
+Structure Explorer will pick these up automatically and display
+them as "Cool Dungeon [My Mod]" in all commands. The readable
+namespace is derived by replacing underscores with spaces and
+capitalising each word (e.g. "my_mod" → "My Mod").
+
+No bundled translations.json needed — this is the easiest path.
+
+----------------------------------------------------------------
+  OPTION 2: translations.json (more control)
+----------------------------------------------------------------
+
+For full control over prefix, suffix, colors, and exact names
+(without the auto-appended namespace suffix), bundle a file at:
     resources/data/<modid>/structure_explorer/translations.json
-They load automatically before config/translations/ files,
-so server admins can always override them.
+
+This uses the same format as the server admin config above.
+It loads after the lang file scan, so it takes priority over
+auto-detected names. Server admin config/translations/ files
+load after this and always win.
+
+Example:
+{
+  "translations": {
+    "mymod": {
+      "prefix": "My Mod: ",
+      "prefix_color": "dark_aqua",
+      "structures": {
+        "cool_dungeon": "Cool Dungeon",
+        "big_tower": "Big Tower"
+      }
+    }
+  }
+}
 
 ================================================================
