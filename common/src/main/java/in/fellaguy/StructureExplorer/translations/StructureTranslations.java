@@ -15,22 +15,45 @@ import java.util.Locale;
 public class StructureTranslations {
     private static final TextColor DEFAULT_COLOR = TextColor.fromLegacyFormat(ChatFormatting.GOLD);
     private static Map<String, NamespaceTranslation> translations = new HashMap<>();
+    // Bare names auto-detected from mod lang files: namespace -> (structure path -> display name)
+    // Kept separate from `translations` so we know whether a name came purely from auto-detection
+    // (gets the "[Namespace]" suffix) or is being styled/overridden by an explicit translation entry.
+    private static Map<String, Map<String, String>> langNames = new HashMap<>();
 
-    public static void load(Map<String, NamespaceTranslation> loaded) {
-        translations = Map.copyOf(loaded);
+    public static void load(Map<String, NamespaceTranslation> loadedTranslations, Map<String, Map<String, String>> loadedLangNames) {
+        translations = Map.copyOf(loadedTranslations);
+        langNames = Map.copyOf(loadedLangNames);
     }
 
     // Returns a styled component for the structure — no click/hover events (caller applies those)
     public static MutableComponent resolve(Identifier structureId) {
-        NamespaceTranslation ns = translations.get(structureId.getNamespace());
+        String namespace = structureId.getNamespace();
+        String path = structureId.getPath();
 
-        if (ns == null || !ns.structures.containsKey(structureId.getPath())) {
-            String readable = prettify(structureId.getPath()) + " [" + prettify(structureId.getNamespace()) + "]";
+        NamespaceTranslation ns = translations.get(namespace);
+        Map<String, String> nsLangNames = langNames.get(namespace);
+        String langName = nsLangNames != null ? nsLangNames.get(path) : null;
+
+        // No explicit translation entry for this namespace at all
+        if (ns == null) {
+            String readable = langName != null
+                ? langName + " [" + prettify(namespace) + "]"
+                : prettify(path) + " [" + prettify(namespace) + "]";
             return Component.literal(readable)
                 .withStyle(style -> style.withColor(DEFAULT_COLOR));
         }
 
-        String name = ns.structures.get(structureId.getPath());
+        // An explicit translation entry exists for this namespace — use the override name if present,
+        // otherwise fall back to the lang-derived name, otherwise the raw path. No "[Namespace]" suffix.
+        String name;
+        if (ns.structures.containsKey(path)) {
+            name = ns.structures.get(path);
+        } else if (langName != null) {
+            name = langName;
+        } else {
+            name = path;
+        }
+
         TextColor nameColor   = ns.nameColor   != null ? ns.nameColor   : DEFAULT_COLOR;
         TextColor prefixColor = ns.prefixColor != null ? ns.prefixColor : DEFAULT_COLOR;
         TextColor suffixColor = ns.suffixColor != null ? ns.suffixColor : DEFAULT_COLOR;

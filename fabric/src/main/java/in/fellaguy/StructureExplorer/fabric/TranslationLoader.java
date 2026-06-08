@@ -29,9 +29,10 @@ public class TranslationLoader implements SimpleSynchronousResourceReloadListene
     @Override
     public void onResourceManagerReload(ResourceManager manager) {
         Map<String, NamespaceTranslation> merged = new HashMap<>();
+        Map<String, Map<String, String>> langNames = new HashMap<>();
 
         // 0. Auto-detect structure names from mod lang files (assets/<ns>/lang/en_us.json)
-        loadFromModLangFiles(merged);
+        loadFromModLangFiles(langNames);
 
         // 1. Load from all mod jars and active datapacks
         // Files at data/<any_namespace>/structure_explorer/translations.json
@@ -62,12 +63,15 @@ public class TranslationLoader implements SimpleSynchronousResourceReloadListene
             }
         }
 
-        StructureTranslations.load(merged);
+        StructureTranslations.load(merged, langNames);
     }
 
     // Scans all loaded mod jars for assets/<namespace>/lang/en_us.json and extracts
-    // keys matching "structure.<namespace>.<path>" as base-layer display names.
-    private static void loadFromModLangFiles(Map<String, NamespaceTranslation> target) {
+    // keys matching "structure.<namespace>.<path>" into a bare (un-styled) name map.
+    // These are kept separate from explicit translations so StructureTranslations can
+    // tell whether a name came purely from auto-detection (gets "[Namespace]" suffix)
+    // or is being styled/overridden by an explicit translation entry.
+    private static void loadFromModLangFiles(Map<String, Map<String, String>> target) {
         for (ModContainer mod : FabricLoader.getInstance().getAllMods()) {
             Optional<Path> assetsOpt = mod.findPath("assets");
             if (assetsOpt.isEmpty()) continue;
@@ -79,7 +83,6 @@ public class TranslationLoader implements SimpleSynchronousResourceReloadListene
                     if (!Files.exists(langFile)) return;
 
                     Map<String, String> structures = new HashMap<>();
-                    String readableNamespace = StructureTranslations.prettify(namespace);
                     try (InputStreamReader reader = new InputStreamReader(Files.newInputStream(langFile))) {
                         JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
                         for (Map.Entry<String, JsonElement> entry : json.entrySet()) {
@@ -88,25 +91,19 @@ public class TranslationLoader implements SimpleSynchronousResourceReloadListene
                             if (!key.startsWith("structure.") || !entry.getValue().isJsonPrimitive()) continue;
                             String[] parts = key.split("\\.", 3);
                             if (parts.length != 3 || !parts[1].equals(namespace)) continue;
-                            String displayName = entry.getValue().getAsString() + " [" + readableNamespace + "]";
-                            structures.put(parts[2], displayName);
+                            structures.put(parts[2], entry.getValue().getAsString());
                         }
                     } catch (Exception ignored) {}
 
                     if (structures.isEmpty()) return;
 
-                    // Merge as base layer — existing entries win (higher-priority sources loaded after)
-                    NamespaceTranslation existing = target.get(namespace);
+                    Map<String, String> existing = target.get(namespace);
                     if (existing == null) {
-                        target.put(namespace, new NamespaceTranslation("", "", null, null, null, structures));
+                        target.put(namespace, structures);
                     } else {
                         Map<String, String> merged = new HashMap<>(structures);
-                        merged.putAll(existing.structures); // existing wins over lang file
-                        target.put(namespace, new NamespaceTranslation(
-                            existing.prefix, existing.suffix,
-                            existing.prefixColor, existing.suffixColor, existing.nameColor,
-                            merged
-                        ));
+                        merged.putAll(existing); // first-seen mod wins on conflict
+                        target.put(namespace, merged);
                     }
                 });
             } catch (Exception ignored) {}
