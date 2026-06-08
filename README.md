@@ -59,6 +59,8 @@ Example in `assets/mymod/lang/en_us.json`:
 
 No extra files needed - names are picked up automatically (see scenarios below for exactly how they're displayed).
 
+> **Note:** This only works for lang files bundled directly inside a mod's JAR (`assets/<namespace>/lang/en_us.json`). Structure Explorer runs server-side and cannot read resource pack lang files - those only exist on the client and are never visible to the server. If your lang entries live in a separate resource pack rather than your mod's JAR, use Option 2 below instead.
+
 ### Option 2 - translations.json *(full control)*
 
 For full control over prefix, suffix, colors, and exact names, bundle a file inside your mod jar at `data/<your_modid>/structure_explorer/translations.json`, using the same [translation file format](#-translations) as the server admin config. It loads **before** `config/translations/` files, so server admins can always override it.
