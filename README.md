@@ -8,7 +8,7 @@ It works by automatically checking every 5s (by default), any moving players, to
 
 ## ⌨ Commands
 
-Primary command: `/explorer` — Alias: `/discoveries`
+Primary command: `/explorer` - Alias: `/discoveries`
 
 | Command | Description |
 |---|---|
@@ -23,7 +23,7 @@ Primary command: `/explorer` — Alias: `/discoveries`
 
 ---
 
-## 📝 Config File — `structure_explorer.json`
+## 📝 Config File - `structure_explorer.json`
 
 Located at: `config/structure_explorer/structure_explorer.json`
 
@@ -31,32 +31,95 @@ Located at: `config/structure_explorer/structure_explorer.json`
 |---|---|---|
 | `checkIntervalMs` | `5000` | How often (in ms) the mod checks if a player has entered a structure. Lower = more responsive, slightly more server load. |
 | `showNthDiscoverer` | `true` | Whether to show discoverer badges in chat notifications, e.g. `[First Discoverer!]` or `[3rd Discoverer]`. |
-| `useMonthDayYear` | `false` | Timestamp format. `false` = DD/MM/YYYY HH:MM:SS — `true` = MM/DD/YYYY HH:MM:SS |
+| `useMonthDayYear` | `false` | Timestamp format. `false` = DD/MM/YYYY HH:MM:SS - `true` = MM/DD/YYYY HH:MM:SS |
 | `trackInstances` | `true` | Whether to record coordinates and timestamps for each structure instance visited. When `false`, only which structure *types* have been discovered is tracked. |
 | `sounds.newDiscoverySound` | `true` | Plays sound effect for a new Discovery found. |
 | `sounds.newInstanceSound` | `true` | Plays sound effect for a new Instance found. |
 
 ---
 
-## 🗣 Translations
+## 🛠 For Mod Makers
 
-Vanilla structure names are now properly named by default.  
-e.g. `minecraft:fortress` ➡ **Nether Fortress**  
-Methods of translating them from other mods can be done following the instructions below.  
+Structure Explorer can pick up structure names two ways - pick whichever suits you.
 
-## Translations Folder — `translations/`
+### Option 1 - Lang file *(simplest)*
 
-Located at: `config/structure_explorer/translations/`
+If your mod already has a lang file, Structure Explorer reads it automatically. Just add entries using this key format:
 
-Place JSON files here to rename structures and apply prefix, suffix, and color styling to any namespace. Files are loaded **after** the mod's built-in translations, so they always override or extend them.
+```json
+"structure.<namespace>.<path>": "Display Name"
+```
 
-Reload at any time with `/explorer reload` (requires OP).
+Example in `assets/mymod/lang/en_us.json`:
+```json
+{
+  "structure.mymod.cool_dungeon": "Cool Dungeon"
+}
+```
 
-Files can be named anything — e.g. `minecraft.json`, `custom.json`.
+No extra files needed - names are picked up automatically (see scenarios below for exactly how they're displayed).
+
+### Option 2 - translations.json *(full control)*
+
+For full control over prefix, suffix, colors, and exact names, bundle a file inside your mod jar at `data/<your_modid>/structure_explorer/translations.json`, using the same [translation file format](#-translations) as the server admin config. It loads **before** `config/translations/` files, so server admins can always override it.
 
 ---
 
-## Translation File Format
+### How the two interact
+
+Say Katter's Structures has `"structure.kattersstructures.sky_dungeo": "Sky Dungeon"` in its lang file. Here's how the final display name is decided:
+
+**Scenario 1 - No lang entry and no translation entry exist at all**
+> e.g. for `kattersstructures:ancient_ruins` with nothing defined anywhere
+> Result: **Ancient Ruins [Kattersstructures]**
+> Both the structure path and the namespace are auto-prettified (underscores → spaces, each word capitalized) and combined - this is the raw fallback.
+
+**Scenario 2 - Lang name exists, no translation entry for the namespace anywhere (mod-bundled or server config)**
+> Result: **Sky Dungeon [Kattersstructures]**
+> The namespace gets auto-prettified and appended in brackets since nothing customizes it.
+
+**Scenario 3 - A translation entry overrides this specific structure's name**
+```json
+{
+  "translations": {
+    "kattersstructures": {
+      "suffix": " [Katter's Structures]",
+      "suffix_color": "gray",
+      "structures": { "sky_dungeo": "Big Sky Fortress" }
+    }
+  }
+}
+```
+> Result: **Big Sky Fortress [Katter's Structures]**
+> The override name is used, styling is applied, and the auto-bracket disappears.
+
+**Scenario 4 - A translation entry styles the namespace but doesn't override this structure**
+```json
+{
+  "translations": {
+    "kattersstructures": {
+      "prefix": "Katter's: ",
+      "prefix_color": "red"
+    }
+  }
+}
+```
+> Result: **Katter's: Sky Dungeon**
+> No override exists for `sky_dungeo`, so the lang name is used as the base - styled, with no auto-bracket.
+
+---
+
+If anyone wants to make **unofficial** support for other mods, data packs work - bundle a `data/<your_namespace>/structure_explorer/translations.json`, just like Option 2 above. These load **before** `config/translations/` files, so server admins can always override them.
+
+---
+
+## 🗣 Translations
+
+Vanilla structure names are translated by default - e.g. `minecraft:fortress` ➡ **Nether Fortress**. To customize names for any namespace, place JSON files in:
+
+`config/structure_explorer/translations/` - files can be named anything (e.g. `minecraft.json`, `custom.json`) and are loaded **after** built-in and mod-bundled translations, so they always win. Reload at any time with `/explorer reload` (requires OP).
+
+### Translation File Format
 
 ```json
 {
@@ -78,186 +141,22 @@ Files can be named anything — e.g. `minecraft.json`, `custom.json`.
 
 Here is an example, using the [Minecraft Vanilla Locations](https://github.com/KCB4Rockstar/Structure-Explorer-Fabric-Mod/blob/master/fabric/src/main/resources/data/structureexplorer/structure_explorer/translations.json)
 
----
-
-## Key Reference
-
-### `replace` *(optional, default: `false`)*
-
-| Value | Behaviour |
-|---|---|
-| `false` | **Merge** — structure entries are unioned (new file wins on conflict), prefix/suffix/colors override only if non-empty, all other built-in names are kept as-is. |
-| `true` | **Replace** — completely discards built-in translations for that namespace. Only what you define in this file will exist for that namespace. |
-
-### `prefix` / `suffix` *(optional, default: `""`)*
-Text shown before or after the structure name.
-- e.g. `"prefix": "Minecraft: "` → **Minecraft: Stronghold**
-- e.g. `"suffix": " [Katter's Structures]"` → **Armory [Katter's Structures]**
-
-### `prefix_color` / `suffix_color` / `name_color` *(optional)*
-Color applied to each part independently. If blank or omitted, defaults to **gold**. See [Colors](#colors) below.
-
-### `structures` *(optional)*
-A map of structure path → display name. The path is the part **after the colon** in the structure ID.
-
-> `minecraft:stronghold` → path is `stronghold`
+| Key | Default | Description |
+|---|---|---|
+| `replace` | `false` | `false` merges with existing translations (new file wins on conflict, prefix/suffix/colors override only if non-empty). `true` discards all built-in/prior translations for that namespace - only what you define here will exist. |
+| `prefix` / `suffix` | `""` | Text shown before/after the structure name, e.g. `"prefix": "Minecraft: "` → **Minecraft: Stronghold** |
+| `prefix_color` / `suffix_color` / `name_color` | *(gold)* | Color applied to each part independently. See [Colors](#colors). |
+| `structures` | *(none)* | Map of structure path → display name. The path is the part **after the colon** in the structure ID - e.g. `minecraft:stronghold` → path is `stronghold` |
 
 ---
 
 ## Colors
 
-**Named colors** *(case-insensitive)*:
+Named colors (case-insensitive): `black` `dark_blue` `dark_green` `dark_aqua` `dark_red` `dark_purple` `gold` `gray` `dark_gray` `blue` `green` `aqua` `red` `light_purple` `yellow` `white`
 
-| | | | |
-|---|---|---|---|
-| `black` | `dark_blue` | `dark_green` | `dark_aqua` |
-| `dark_red` | `dark_purple` | `gold` | `gray` |
-| `dark_gray` | `blue` | `green` | `aqua` |
-| `red` | `light_purple` | `yellow` | `white` |
-
-**Hex colors** *(CSS-style, prefix with `#`)*:
-```
-"#FF5500"   "#00AAFF"   "#FFFFFF"
-```
+Hex colors (CSS-style, prefix with `#`): `"#FF5500"` `"#00AAFF"` `"#FFFFFF"`
 
 ---
-
-## Examples
-
-### Add a prefix to all Minecraft structures, keep all names
-```json
-{
-  "translations": {
-    "minecraft": {
-      "prefix": "Minecraft: ",
-      "prefix_color": "dark_green"
-    }
-  }
-}
-```
-Result: **Minecraft: Stronghold**, **Minecraft: End City**, etc.
-
----
-
-### Override specific names and add a custom entry, keep everything else
-```json
-{
-  "translations": {
-    "minecraft": {
-      "structures": {
-        "ocean_ruin_cold": "Cold Ocean Ruins",
-        "ocean_ruin_warm": "Warm Ocean Ruins",
-        "dungeon": "Mob Dungeon"
-      }
-    }
-  }
-}
-```
-
----
-
-### Replace all Minecraft translations — only show what you define
-```json
-{
-  "replace": true,
-  "translations": {
-    "minecraft": {
-      "structures": {
-        "stronghold": "Stronghold",
-        "end_city": "End City"
-      }
-    }
-  }
-}
-```
-All other `minecraft:` structures will fall back to a prettified name like **Stronghold [Minecraft]**.
-
----
-
-### Third-party mod with custom styling
-```json
-{
-  "translations": {
-    "kattersstructures": {
-      "suffix": " [Katter's Structures]",
-      "suffix_color": "gray",
-      "structures": {
-        "armory": "Armory"
-      }
-    }
-  }
-}
-```
-Result: **Armory [Katter's Structures]**
-
----
-
-## 🛠 For Mod Makers
-
-### Option 1 — Lang file *(simplest)*
-
-If your mod already has a lang file, Structure Explorer will read it automatically. Add entries using this key format:
-
-```json
-"structure.<namespace>.<path>": "Display Name"
-```
-
-Example in `assets/mymod/lang/en_us.json`:
-```json
-{
-  "structure.mymod.cool_dungeon": "Cool Dungeon",
-  "structure.mymod.big_tower": "Big Tower"
-}
-```
-
-These are picked up automatically and displayed as **Cool Dungeon [My Mod]** in all commands. The readable namespace is derived by replacing underscores with spaces and capitalising each word — e.g. `my_mod` → `My Mod`. No extra files needed.
-
----
-
-### Option 2 — translations.json *(full control)*
-
-For full control over prefix, suffix, colors, and exact names without the auto-appended namespace suffix, bundle a file inside your mod jar:
-
-```
-your-mod.jar
-└── resources/
-    └── data/
-        └── <your_modid>/
-            └── structure_explorer/
-                └── translations.json
-```
-
-This uses the same format as the server admin config above. It loads after the lang file scan, so it takes priority over auto-detected names. Server admin `config/translations/` files load after this and always win.
-
-Example:
-```json
-{
-  "translations": {
-    "mymod": {
-      "prefix": "My Mod: ",
-      "prefix_color": "dark_aqua",
-      "structures": {
-        "cool_dungeon": "Cool Dungeon",
-        "big_tower": "Big Tower"
-      }
-    }
-  }
-}
-```
-
----
-
-If anyone wants to make unofficial Datapacks for different mods to support Structure Explorer translations, you can use this format:
-
-```
-your-datapack
-  └── data/
-      └── <your_namespace>/
-          └── structure_explorer/
-              └── translations.json
-```
-
-Bundled mod translations load **before** `config/translations/` files, so server admins can always override them by placing their own file in the translations folder.
 
 _Disclaimer: AI was used for varying parts of this mod._
 

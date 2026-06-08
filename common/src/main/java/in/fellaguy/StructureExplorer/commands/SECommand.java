@@ -67,7 +67,7 @@ public class SECommand {
                     )
                 )
 
-                // /explorer structure <structureId> — list all players who found it
+                // /explorer structure <structureId> - list all players who found it
                 .then(Commands.literal("structure")
                     .then(Commands.argument("structureId", StringArgumentType.string())
                         .executes(cs -> {
@@ -125,7 +125,7 @@ public class SECommand {
                     )
                 )
 
-                // /explorer reload — OP only
+                // /explorer reload - OP only
                 .then(Commands.literal("reload")
                     .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                     .executes(cs -> {
@@ -135,7 +135,7 @@ public class SECommand {
                     })
                 )
 
-                // /explorer info <structureId> — shows options panel (triggered by clicking a structure name)
+                // /explorer info <structureId> - shows options panel (triggered by clicking a structure name)
                 .then(Commands.literal("info")
                     .then(Commands.argument("structureId", StringArgumentType.string())
                         .executes(cs -> {
@@ -150,7 +150,7 @@ public class SECommand {
                     )
                 )
 
-                // /explorer playerinstances <player> <structureId> [page <n>] — OP: view any player's instances
+                // /explorer playerinstances <player> <structureId> [page <n>] - OP: view any player's instances
                 .then(Commands.literal("playerinstances")
                     .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                     .then(Commands.argument("player", StringArgumentType.string())
@@ -192,7 +192,7 @@ public class SECommand {
                     )
                 )
 
-                // /explorer here — show info for the structure the player is currently standing in
+                // /explorer here - show info for the structure the player is currently standing in
                 .then(Commands.literal("here")
                     .executes(cs -> {
                         if (!cs.getSource().isPlayer()) {
@@ -203,7 +203,7 @@ public class SECommand {
                     })
                 )
 
-                // /explorer instances <structureId> [page <n>] — paginated instance list for calling player
+                // /explorer instances <structureId> [page <n>] - paginated instance list for calling player
                 .then(Commands.literal("instances")
                     .then(Commands.argument("structureId", StringArgumentType.string())
                         .executes(cs -> {
