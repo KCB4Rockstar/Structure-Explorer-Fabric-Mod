@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 
 public class ModConfig {
@@ -34,7 +33,6 @@ public class ModConfig {
 
         // Always ensure the folder structure exists
         modDir.resolve("translations").toFile().mkdirs();
-        writeReadme(modDir.resolve("readme.txt").toFile());
 
         if (file.exists()) {
             try (Reader reader = new FileReader(file)) {
@@ -60,24 +58,6 @@ public class ModConfig {
     // 1 tick = 50ms at 20 TPS
     public int getCheckIntervalTicks() {
         return (int) Math.max(1, checkIntervalMs / 50);
-    }
-
-    private static void writeReadme(File file) {
-        if (file.exists()) return;
-        String content = readResourceAsString("/structure_explorer_readme.txt");
-        if (content == null) return;
-        try (Writer writer = new FileWriter(file, StandardCharsets.UTF_8)) {
-            writer.write(content);
-        } catch (IOException ignored) {}
-    }
-
-    private static String readResourceAsString(String path) {
-        try (InputStream stream = ModConfig.class.getResourceAsStream(path)) {
-            if (stream == null) return null;
-            return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException ignored) {
-            return null;
-        }
     }
 
 }

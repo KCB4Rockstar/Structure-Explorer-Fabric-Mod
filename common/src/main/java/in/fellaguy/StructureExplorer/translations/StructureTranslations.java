@@ -25,7 +25,7 @@ public class StructureTranslations {
         langNames = Map.copyOf(loadedLangNames);
     }
 
-    // Returns a styled component for the structure — no click/hover events (caller applies those)
+    // Returns a styled component for the structure - no click/hover events (caller applies those)
     public static MutableComponent resolve(Identifier structureId) {
         String namespace = structureId.getNamespace();
         String path = structureId.getPath();
@@ -43,7 +43,7 @@ public class StructureTranslations {
                 .withStyle(style -> style.withColor(DEFAULT_COLOR));
         }
 
-        // An explicit translation entry exists for this namespace — use the override name if present,
+        // An explicit translation entry exists for this namespace - use the override name if present,
         // otherwise fall back to the lang-derived name, otherwise the raw path. No "[Namespace]" suffix.
         String name;
         if (ns.structures.containsKey(path)) {

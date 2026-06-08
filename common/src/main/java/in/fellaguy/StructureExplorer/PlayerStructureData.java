@@ -62,7 +62,7 @@ public class PlayerStructureData extends SavedData {
         }
     }
 
-    // Migrates old Set<Identifier> format — each structure gets an empty instance list
+    // Migrates old Set<Identifier> format - each structure gets an empty instance list
     private static PlayerStructureData fromLegacy(Map<UUID, Set<Identifier>> legacy) {
         Map<UUID, Map<Identifier, List<StructureInstance>>> converted = new HashMap<>();
         for (Map.Entry<UUID, Set<Identifier>> entry : legacy.entrySet()) {
@@ -146,7 +146,7 @@ public class PlayerStructureData extends SavedData {
 
     // --- Mutation methods ---
 
-    // Creates the key only (no instance) — used when trackInstances is disabled
+    // Creates the key only (no instance) - used when trackInstances is disabled
     public void addDiscoveryKey(UUID playerUuid, Identifier structureId) {
         byPlayer.computeIfAbsent(playerUuid, k -> new HashMap<>())
             .computeIfAbsent(structureId, k -> new ArrayList<>());
@@ -154,7 +154,7 @@ public class PlayerStructureData extends SavedData {
         setDirty();
     }
 
-    // Creates the key and adds the first instance — triggers the discovery announcement in caller
+    // Creates the key and adds the first instance - triggers the discovery announcement in caller
     public void addDiscovery(UUID playerUuid, Identifier structureId, BlockPos origin, Instant timestamp) {
         byPlayer.computeIfAbsent(playerUuid, k -> new HashMap<>())
             .computeIfAbsent(structureId, k -> new ArrayList<>())
@@ -163,7 +163,7 @@ public class PlayerStructureData extends SavedData {
         setDirty();
     }
 
-    // Adds a new instance to an already-discovered structure — no announcement
+    // Adds a new instance to an already-discovered structure - no announcement
     public void addInstance(UUID playerUuid, Identifier structureId, BlockPos origin, Instant timestamp) {
         byPlayer.computeIfAbsent(playerUuid, k -> new HashMap<>())
             .computeIfAbsent(structureId, k -> new ArrayList<>())
