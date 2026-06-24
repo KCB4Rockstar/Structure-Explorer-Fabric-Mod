@@ -2,7 +2,6 @@ package in.fellaguy.StructureExplorer.translations;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.TextColor;
@@ -13,7 +12,27 @@ import java.util.Map;
 import java.util.Locale;
 
 public class StructureTranslations {
-    private static final TextColor DEFAULT_COLOR = TextColor.fromLegacyFormat(ChatFormatting.GOLD);
+    private static final TextColor DEFAULT_COLOR = TextColor.fromRgb(0xFFAA00); // gold
+
+    private static final Map<String, Integer> NAMED_COLORS = new HashMap<>();
+    static {
+        NAMED_COLORS.put("black",        0x000000);
+        NAMED_COLORS.put("dark_blue",    0x0000AA);
+        NAMED_COLORS.put("dark_green",   0x00AA00);
+        NAMED_COLORS.put("dark_aqua",    0x00AAAA);
+        NAMED_COLORS.put("dark_red",     0xAA0000);
+        NAMED_COLORS.put("dark_purple",  0xAA00AA);
+        NAMED_COLORS.put("gold",         0xFFAA00);
+        NAMED_COLORS.put("gray",         0xAAAAAA);
+        NAMED_COLORS.put("dark_gray",    0x555555);
+        NAMED_COLORS.put("blue",         0x5555FF);
+        NAMED_COLORS.put("green",        0x55FF55);
+        NAMED_COLORS.put("aqua",         0x55FFFF);
+        NAMED_COLORS.put("red",          0xFF5555);
+        NAMED_COLORS.put("light_purple", 0xFF55FF);
+        NAMED_COLORS.put("yellow",       0xFFFF55);
+        NAMED_COLORS.put("white",        0xFFFFFF);
+    }
     private static Map<String, NamespaceTranslation> translations = new HashMap<>();
     // Bare names auto-detected from mod lang files: namespace -> (structure path -> display name)
     // Kept separate from `translations` so we know whether a name came purely from auto-detection
@@ -151,8 +170,8 @@ public class StructureTranslations {
                 return null;
             }
         }
-        ChatFormatting fmt = ChatFormatting.getByName(s.toUpperCase());
-        if (fmt != null && fmt.isColor()) return TextColor.fromLegacyFormat(fmt);
+        Integer rgb = NAMED_COLORS.get(s.toLowerCase(Locale.ROOT));
+        if (rgb != null) return TextColor.fromRgb(rgb);
         return null;
     }
 }
