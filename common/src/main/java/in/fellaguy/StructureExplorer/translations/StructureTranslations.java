@@ -51,7 +51,7 @@ public class StructureTranslations {
         } else if (langName != null) {
             name = langName;
         } else {
-            name = path;
+            name = prettify(path);
         }
 
         TextColor nameColor   = ns.nameColor   != null ? ns.nameColor   : DEFAULT_COLOR;
